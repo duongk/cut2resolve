@@ -11,6 +11,7 @@ import { llcProjectV1Schema, llcProjectV2Schema } from './types';
 import { mapSaveableSegments } from './segments';
 import isDev from './isDev';
 import { basename } from './util/path';
+import { resolveMarkerImporterScriptFileName } from '../../main/common.js';
 
 const { readFile, writeFile } = window.require('node:fs/promises');
 const cueParser = window.require('cue-parser');
@@ -238,7 +239,8 @@ export async function exportEdlFile({ type, cutSegments, customOutDir, filePath,
     }
   }
 
-  const defaultPath = getOutPath({ filePath, customOutDir: type === 'resolve-marker-manifest' ? undefined : customOutDir, fileName: `${basename(filePath)}.${ext}` });
+  const defaultFileName = type === 'resolve-marker-importer-script' ? resolveMarkerImporterScriptFileName : `${basename(filePath)}.${ext}`;
+  const defaultPath = getOutPath({ filePath, customOutDir: type === 'resolve-marker-manifest' ? undefined : customOutDir, fileName: defaultFileName });
 
   const { canceled, filePath: savePath } = await dialog.showSaveDialog({ defaultPath, title: i18n.t('Export project'), ...(filters != null ? { filters } : {}) });
   if (canceled || !savePath) return;
