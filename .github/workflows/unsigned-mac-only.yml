@@ -1,4 +1,4 @@
-name: Unsigned test build
+name: Unsigned-MAC-only Build
 
 on:
   workflow_dispatch:
