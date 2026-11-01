@@ -14,6 +14,8 @@ export const createSegment = (props?: {
   end?: number | undefined,
   name?: string | undefined,
   tags?: unknown | undefined,
+  notes?: string | undefined,
+  keywords?: string[] | undefined,
   initial?: true,
   selected?: boolean,
 }): Omit<StateSegment, 'segColorIndex'> => ({
@@ -28,6 +30,8 @@ export const createSegment = (props?: {
   tags: props?.tags != null && typeof props.tags === 'object'
     ? Object.fromEntries(Object.entries(props.tags).map(([key, value]) => [key, String(value)]))
     : undefined,
+  ...(props?.notes != null && { notes: props.notes }),
+  ...(props?.keywords != null && { keywords: props.keywords }),
 
   ...(props?.initial && { initial: true }),
 });
@@ -38,9 +42,9 @@ export const addSegmentColorIndex = (segment: Omit<StateSegment, 'segColorIndex'
 });
 
 export const mapSaveableSegments = (segments: StateSegment[]) => segments.map(({
-  start, end, name, tags, selected,
+  start, end, name, tags, notes, keywords, selected,
 }) => ({
-  start, end, name, tags, selected,
+  start, end, name, tags, notes, keywords, selected,
 }));
 
 // in the past we had non-string tags

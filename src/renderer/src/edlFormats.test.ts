@@ -241,7 +241,7 @@ it('formats a portable Resolve marker sidecar', () => {
     mediaFilePath: '/Volumes/Video Library/2026/10/C0001.MP4',
     clipMetadata: { description: 'Golden hour', projects: ['Deck renovation'], keywords: ['deck', 'drill'], rating: 4, status: 'keep' },
     cutSegments: [
-      { start: 1, end: 2.5, name: 'Walking shot', tags: { rating: '4', keyword: 'nature' } },
+      { start: 1, end: 2.5, name: 'Walking shot', notes: 'Good movement', keywords: ['nature', 'walking'], tags: { rating: '4' } },
       { start: 4, name: 'Point marker' },
     ],
     getFrameCount: (seconds) => Math.round(seconds * 24),
@@ -251,7 +251,7 @@ it('formats a portable Resolve marker sidecar', () => {
     version: 1,
     sourceFileName: 'C0001.MP4',
     metadata: { description: 'Golden hour', projects: ['Deck renovation'], keywords: ['deck', 'drill'], rating: 4, status: 'keep' },
-    markers: [{ frame: 24, duration: 36, name: 'Walking shot', note: 'rating: 4\nkeyword: nature' }],
+    markers: [{ frame: 24, duration: 36, name: 'Walking shot', note: 'Good movement\nKeywords: nature, walking\nrating: 4' }],
   });
 });
 
@@ -261,6 +261,9 @@ it('formats a reusable Resolve importer that only reads adjacent marker sidecars
   expect(script).toContain("clip.GetClipProperty('File Path')");
   expect(script).toContain('source_path + SIDECAR_SUFFIX');
   expect(script).toContain("clip.AddMarker(frame, 'Blue', marker['name'], marker['note'], marker['duration'], custom_data)");
+  expect(script).toContain('clip.SetMetadata(resolve_metadata)');
+  expect(script).toContain("resolve_metadata['Keywords']");
+  expect(script).toContain("CUSTOM_DATA_PREFIXES = ('cut2resolve:', 'losslesscut:')");
   expect(script).toContain('clip.DeleteMarkerAtFrame(frame)');
   expect(script).not.toContain('Proxy');
 });

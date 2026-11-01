@@ -75,7 +75,7 @@ Same as CSV but `<tab>` instead.
 
 The importer finds sidecars only by starting from each imported original's full file path. It will not import, move, relink, transcode, or modify original files. It does not scan or change a `Proxy` subfolder. Running it again updates markers previously created by the importer while preserving any manual Resolve marker at the same frame.
 
-Clip metadata is retained in the sidecar for a future Resolve metadata-import workflow. The current importer deliberately imports duration markers only; it does not change Resolve clip metadata yet.
+The same importer also updates Resolve clip **Description**, **Keywords**, and **Rating** from the Clip metadata panel. Segment **Notes** become the Resolve marker note, while segment **Keywords** are added as a labeled line in that note because Resolve markers do not have a separate keywords field. Projects and Status remain in the sidecar for logging; they are not written to a built-in Resolve field.
 
 Resolve allows only one marker at a given source frame. Existing manual markers are left untouched; the script reports any range it could not add. Keep the `.llc` project as the portable source of truth and export a fresh sidecar after changing its ranges.
 

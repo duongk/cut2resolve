@@ -21,16 +21,20 @@ export const getTimeFromFrameNum = (detectedFps: number, frameNum: number) => fr
 /** A portable per-source sidecar, read by the one reusable Resolve importer script. */
 export function formatResolveMarkerManifest({ mediaFilePath, cutSegments, getFrameCount, clipMetadata }: {
   mediaFilePath: string,
-  cutSegments: (SegmentBase & { tags?: SegmentTags | undefined })[],
+  cutSegments: (SegmentBase & { tags?: SegmentTags | undefined, notes?: string | undefined, keywords?: string[] | undefined })[],
   getFrameCount: GetFrameCount,
   clipMetadata?: ClipMetadata | undefined,
 }) {
-  const markers = cutSegments.flatMap(({ start, end, name, tags }) => {
+  const markers = cutSegments.flatMap(({ start, end, name, tags, notes, keywords }) => {
     if (end == null) return [];
     const startFrame = getFrameCount(start);
     const endFrame = getFrameCount(end);
     if (startFrame == null || endFrame == null || endFrame <= startFrame) return [];
-    const note = Object.entries(tags ?? {}).map(([key, value]) => `${key}: ${value}`).join('\n');
+    const note = [
+      notes?.trim(),
+      keywords != null && keywords.length > 0 ? `Keywords: ${keywords.join(', ')}` : undefined,
+      ...Object.entries(tags ?? {}).map(([key, value]) => `${key}: ${value}`),
+    ].filter((value): value is string => value != null && value !== '').join('\n');
     return [{
       frame: startFrame,
       duration: Math.max(1, endFrame - startFrame),
@@ -51,9 +55,106 @@ export function formatResolveMarkerManifest({ mediaFilePath, cutSegments, getFra
  * One reusable Resolve script. It reads only an adjacent sidecar for each Media Pool
  * original, so it never imports, relinks, moves, or touches sibling Proxy directories.
  */
-export function formatResolveMarkerImporterScript() {
+export function formatLegacyResolveMarkerImporterScript() {
   // eslint-disable-next-line @stylistic/quotes -- Python source is intentionally a multiline template literal.
   return `# LosslessCut Resolve marker importer\n# Install once in Resolve's Scripts/Utility folder, then run after importing originals.\n# For every Media Pool original, this reads only <original>.resolve-markers.json beside it.\n\nimport json\nimport os\n\nSIDECAR_SUFFIX = '.resolve-markers.json'\nCUSTOM_DATA_PREFIX = 'losslesscut:'\n\ndef all_clips(folder):\n    for clip in folder.GetClipList() or []:\n        yield clip\n    for child in folder.GetSubFolderList() or []:\n        yield from all_clips(child)\n\ndef marker_at(markers, frame):\n    return markers.get(frame) or markers.get(str(frame))\n\ndef load_sidecar(source_path):\n    sidecar_path = source_path + SIDECAR_SUFFIX\n    if not os.path.isfile(sidecar_path):\n        return None\n    with open(sidecar_path, 'r', encoding='utf-8') as sidecar:\n        manifest = json.load(sidecar)\n    if manifest.get('version') != 1 or manifest.get('sourceFileName') != os.path.basename(source_path):\n        raise RuntimeError('Invalid LosslessCut marker sidecar: ' + sidecar_path)\n    return manifest\n\ndef import_markers(clip, manifest):\n    added = 0\n    updated = 0\n    skipped = 0\n    existing = clip.GetMarkers() or {}\n    for marker in manifest.get('markers', []):\n        frame = marker['frame']\n        current = marker_at(existing, frame)\n        if current:\n            if (current.get('customData') or '').startswith(CUSTOM_DATA_PREFIX):\n                clip.DeleteMarkerAtFrame(frame)\n                updated += 1\n            else:\n                print('LosslessCut: skipped frame %d on %s because a non-LosslessCut marker already exists there' % (frame, clip.GetName()))\n                skipped += 1\n                continue\n        custom_data = '%s%s:%d' % (CUSTOM_DATA_PREFIX, manifest['sourceFileName'], frame)\n        if clip.AddMarker(frame, 'Blue', marker['name'], marker['note'], marker['duration'], custom_data):\n            added += 1\n        else:\n            print('LosslessCut: could not add marker at frame %d on %s' % (frame, clip.GetName()))\n            skipped += 1\n    return added, updated, skipped\n\ndef main():\n    resolve = bmd.scriptapp('Resolve')\n    if resolve is None:\n        raise RuntimeError('Open DaVinci Resolve before running this script.')\n    project = resolve.GetProjectManager().GetCurrentProject()\n    if project is None:\n        raise RuntimeError('Open a Resolve project before running this script.')\n\n    totals = [0, 0, 0]\n    for clip in all_clips(project.GetMediaPool().GetRootFolder()):\n        source_path = clip.GetClipProperty('File Path') or ''\n        manifest = load_sidecar(source_path)\n        if manifest is None:\n            continue\n        result = import_markers(clip, manifest)\n        totals = [totals[index] + result[index] for index in range(3)]\n    print('LosslessCut: added %d, updated %d, skipped %d Media Pool markers' % tuple(totals))\n\nmain()\n`;
+}
+
+/** The universal Resolve script imports both marker and supported clip metadata. */
+export function formatResolveMarkerImporterScript() {
+  // eslint-disable-next-line @stylistic/quotes -- Python source is intentionally a multiline template literal.
+  return `# cut2resolve Resolve importer
+# Install once in Resolve's Scripts/Utility folder, then run after importing originals.
+# Reads only <original>.resolve-markers.json beside each Media Pool original.
+
+import json
+import os
+
+SIDECAR_SUFFIX = '.resolve-markers.json'
+CUSTOM_DATA_PREFIX = 'cut2resolve:'
+CUSTOM_DATA_PREFIXES = ('cut2resolve:', 'losslesscut:')
+
+def all_clips(folder):
+    for clip in folder.GetClipList() or []:
+        yield clip
+    for child in folder.GetSubFolderList() or []:
+        yield from all_clips(child)
+
+def marker_at(markers, frame):
+    return markers.get(frame) or markers.get(str(frame))
+
+def load_sidecar(source_path):
+    sidecar_path = source_path + SIDECAR_SUFFIX
+    if not os.path.isfile(sidecar_path):
+        return None
+    with open(sidecar_path, 'r', encoding='utf-8') as sidecar:
+        manifest = json.load(sidecar)
+    if manifest.get('version') != 1 or manifest.get('sourceFileName') != os.path.basename(source_path):
+        raise RuntimeError('Invalid cut2resolve marker sidecar: ' + sidecar_path)
+    return manifest
+
+def import_clip_metadata(clip, manifest):
+    metadata = manifest.get('metadata') or {}
+    resolve_metadata = {}
+    if metadata.get('description'):
+        resolve_metadata['Description'] = metadata['description']
+    if metadata.get('keywords'):
+        resolve_metadata['Keywords'] = ', '.join(metadata['keywords'])
+    if metadata.get('rating'):
+        resolve_metadata['Rating'] = str(metadata['rating'])
+    if not resolve_metadata:
+        return False
+    if not clip.SetMetadata(resolve_metadata):
+        print('cut2resolve: could not update clip metadata on ' + clip.GetName())
+        return False
+    return True
+
+def import_markers(clip, manifest):
+    added = 0
+    updated = 0
+    skipped = 0
+    existing = clip.GetMarkers() or {}
+    for marker in manifest.get('markers', []):
+        frame = marker['frame']
+        current = marker_at(existing, frame)
+        if current:
+            if (current.get('customData') or '').startswith(CUSTOM_DATA_PREFIXES):
+                clip.DeleteMarkerAtFrame(frame)
+                updated += 1
+            else:
+                print('cut2resolve: skipped frame %d on %s because a manual marker already exists there' % (frame, clip.GetName()))
+                skipped += 1
+                continue
+        custom_data = '%s%s:%d' % (CUSTOM_DATA_PREFIX, manifest['sourceFileName'], frame)
+        if clip.AddMarker(frame, 'Blue', marker['name'], marker['note'], marker['duration'], custom_data):
+            added += 1
+        else:
+            print('cut2resolve: could not add marker at frame %d on %s' % (frame, clip.GetName()))
+            skipped += 1
+    return added, updated, skipped
+
+def main():
+    resolve = bmd.scriptapp('Resolve')
+    if resolve is None:
+        raise RuntimeError('Open DaVinci Resolve before running this script.')
+    project = resolve.GetProjectManager().GetCurrentProject()
+    if project is None:
+        raise RuntimeError('Open a Resolve project before running this script.')
+
+    totals = [0, 0, 0, 0]
+    for clip in all_clips(project.GetMediaPool().GetRootFolder()):
+        source_path = clip.GetClipProperty('File Path') or ''
+        manifest = load_sidecar(source_path)
+        if manifest is None:
+            continue
+        if import_clip_metadata(clip, manifest):
+            totals[3] += 1
+        result = import_markers(clip, manifest)
+        totals[:3] = [totals[index] + result[index] for index in range(3)]
+    print('cut2resolve: added %d, updated %d, skipped %d Media Pool markers; updated metadata on %d clips' % tuple(totals))
+
+main()
+`;
 }
 
 export function getFrameCountRaw(detectedFps: number | undefined, sec: number) {

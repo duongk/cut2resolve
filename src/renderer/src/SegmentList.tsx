@@ -266,28 +266,40 @@ const Segment = memo(({
       </div>
 
       {!invertCutSegments && 'name' in seg && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '.3em', marginTop: '.15em', marginRight: '1.7em' }}>
-          <span style={{ fontSize: '.7em', color: primaryTextColor }}>{t('Name')}</span>
-          <TextInput
-            aria-label={t('Name')}
-            defaultValue={seg.name}
-            key={`${seg.segId}:${seg.name}`}
-            maxLength={500}
-            placeholder={t('Name')}
-            onBlur={(event) => {
-              if (event.target.value !== seg.name) updateSegAtIndex(index, { name: event.target.value });
-            }}
-            onClick={(event) => event.stopPropagation()}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') event.currentTarget.blur();
-              else if (event.key === 'Escape') {
-                const input = event.currentTarget;
-                input.value = seg.name;
-                input.blur();
-              }
-            }}
-            style={{ minWidth: 0, padding: '.05em .3em' }}
-          />
+        <div style={{ display: 'grid', gap: '.15em', marginTop: '.15em', marginRight: '1.7em' }}>
+          {([
+            { key: 'name' as const, label: t('Name'), placeholder: t('Name'), value: seg.name },
+            { key: 'notes' as const, label: t('Notes'), placeholder: t('Notes'), value: seg.notes ?? '' },
+            { key: 'keywords' as const, label: t('Keywords'), placeholder: t('Comma-separated'), value: (seg.keywords ?? []).join(', ') },
+          ]).map(({ key, label, placeholder, value }) => (
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '.3em' }}>
+              <span style={{ fontSize: '.7em', color: primaryTextColor, minWidth: '3.8em' }}>{label}</span>
+              <TextInput
+                aria-label={label}
+                defaultValue={value}
+                key={`${seg.segId}:${key}:${value}`}
+                maxLength={500}
+                placeholder={placeholder}
+                onBlur={(event) => {
+                  const nextValue = event.target.value;
+                  if (key === 'keywords') {
+                    const keywords = [...new Set(nextValue.split(',').map((keyword) => keyword.trim()).filter(Boolean))];
+                    if (keywords.join(', ') !== (seg.keywords ?? []).join(', ')) updateSegAtIndex(index, { keywords });
+                  } else if (nextValue !== seg[key]) updateSegAtIndex(index, { [key]: nextValue });
+                }}
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') event.currentTarget.blur();
+                  else if (event.key === 'Escape') {
+                    const input = event.currentTarget;
+                    input.value = value;
+                    input.blur();
+                  }
+                }}
+                style={{ minWidth: 0, padding: '.05em .3em' }}
+              />
+            </div>
+          ))}
         </div>
       )}
       {Object.entries(tags).map(([tagName, value]) => (

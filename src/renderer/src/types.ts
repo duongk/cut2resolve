@@ -45,6 +45,8 @@ export const llcProjectV1Schema = z.object({
     end: z.number().optional(),
     name: z.string(),
     tags: segmentTagsSchema.optional(),
+    notes: z.string().optional(),
+    keywords: z.string().array().optional(),
   }).array(),
 });
 
@@ -56,6 +58,8 @@ export const llcProjectV2Schema = z.object({
     end: z.number().optional(),
     name: z.string(),
     tags: segmentTagsSchema.optional(),
+    notes: z.string().optional(),
+    keywords: z.string().array().optional(),
     selected: z.boolean().optional(),
   }).array(),
 });
@@ -81,6 +85,8 @@ export interface StateSegment extends SegmentBase, SegmentColorIndex {
   name: string;
   segId: string;
   tags?: SegmentTags | undefined;
+  notes?: string | undefined;
+  keywords?: string[] | undefined;
   initial?: true,
   selected: boolean,
 }
