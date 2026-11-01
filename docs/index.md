@@ -64,17 +64,18 @@ Same as CSV but `<tab>` instead.
 
 ### DaVinci Resolve Media Pool duration markers
 
-**File → Export project → DaVinci Resolve Media Pool markers (script)** creates a Python script containing the named segments for the currently opened source clip. It is intended for logging: every segment with an In and Out point becomes a blue duration marker; its label becomes the marker name and its tags become the marker note. Segments with no Out point are not exported.
+**File → Export project → DaVinci Resolve marker sidecar** creates an adjacent `<original>.resolve-markers.json` file for the currently opened source clip. It is intended for logging: every segment with an In and Out point becomes a blue duration marker; its label becomes the marker name and its tags become the marker note. Segments with no Out point are not exported.
 
-1. In Resolve, import the original source clip into the Media Pool. Do not import a proxy in its place.
-2. Copy the exported `.py` file into Resolve's user script folder and restart Resolve or refresh its Scripts menu:
+1. Once, use **File → Export project → DaVinci Resolve marker importer script** and copy the exported `.py` file into Resolve's user script folder. Restart Resolve or refresh its Scripts menu:
    - macOS: `~/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/Scripts/Utility/`
    - Windows: `%AppData%\Blackmagic Design\DaVinci Resolve\Fusion\Scripts\Utility\`
-3. Run it from **Workspace → Scripts → Utility**.
+2. For each source logged in LosslessCut, save its marker sidecar beside the original file. Keep the sidecar with the source when moving or copying media.
+3. In Resolve, import the original source clips into the Media Pool. Do not import a proxy in their place.
+4. Run the one importer from **Workspace → Scripts → Utility**. It processes every imported original that has its adjacent sidecar.
 
-The script identifies the one matching Media Pool item by its full original-file path, then adds markers using Resolve's Media Pool scripting API. It will not import, move, relink, transcode, or modify the original file. It does not scan or change a `Proxy` subfolder. It deliberately stops if the original source is absent or has been imported more than once, rather than guessing based on a filename.
+The importer finds sidecars only by starting from each imported original's full file path. It will not import, move, relink, transcode, or modify original files. It does not scan or change a `Proxy` subfolder. Running it again updates markers previously created by the importer while preserving any manual Resolve marker at the same frame.
 
-Resolve allows only one marker at a given source frame. Existing markers are left untouched; the script reports any range it could not add. Keep the `.llc` project as the portable source of truth and export a fresh script after changing its ranges.
+Resolve allows only one marker at a given source frame. Existing manual markers are left untouched; the script reports any range it could not add. Keep the `.llc` project as the portable source of truth and export a fresh sidecar after changing its ranges.
 
 ## More
 

@@ -1,7 +1,7 @@
 import { it, describe, expect, test } from 'vitest';
 
 import type { Otio } from './edlFormats';
-import { parseSrtToSegments, formatSrt, parseYouTube, formatYouTube, parseMplayerEdl, parseXmeml, parseFcpXml, parseCsv, parseCsvTime, getFrameValParser, formatCsvFrames, formatResolveMarkerScript, getFrameCountRaw, parsePbf, parseDvAnalyzerSummaryTxt, parseCutlist, parseDjiGps1, parseOtio, parseDjiGps2 } from './edlFormats';
+import { parseSrtToSegments, formatSrt, parseYouTube, formatYouTube, parseMplayerEdl, parseXmeml, parseFcpXml, parseCsv, parseCsvTime, getFrameValParser, formatCsvFrames, formatResolveMarkerImporterScript, formatResolveMarkerManifest, getFrameCountRaw, parsePbf, parseDvAnalyzerSummaryTxt, parseCutlist, parseDjiGps1, parseOtio, parseDjiGps2 } from './edlFormats';
 import { readFixture, readFixtureBinary } from './test/util';
 import otioFixture from './test/fixtures/otio';
 
@@ -236,23 +236,31 @@ it('parses fcpxml with single asset-clip, whole second times and missing start',
   expect(parseFcpXml(getXml('<asset-clip offset="0s" start="0s" duration="10s"/><asset-clip offset="10s" duration="2.5s"/>'))).toStrictEqual([{ start: 0, end: 10 }, { start: 0, end: 2.5 }]);
 });
 
-it('formats a Resolve script that adds duration markers to the existing source clip', () => {
-  const script = formatResolveMarkerScript({
+it('formats a portable Resolve marker sidecar', () => {
+  const manifest = JSON.parse(formatResolveMarkerManifest({
     mediaFilePath: '/Volumes/Video Library/2026/10/C0001.MP4',
     cutSegments: [
       { start: 1, end: 2.5, name: 'Walking shot', tags: { rating: '4', keyword: 'nature' } },
       { start: 4, name: 'Point marker' },
     ],
     getFrameCount: (seconds) => Math.round(seconds * 24),
-  });
+  }));
 
+  expect(manifest).toStrictEqual({
+    version: 1,
+    sourceFileName: 'C0001.MP4',
+    markers: [{ frame: 24, duration: 36, name: 'Walking shot', note: 'rating: 4\nkeyword: nature' }],
+  });
+});
+
+it('formats a reusable Resolve importer that only reads adjacent marker sidecars', () => {
+  const script = formatResolveMarkerImporterScript();
+  expect(script).toContain("SIDECAR_SUFFIX = '.resolve-markers.json'");
   expect(script).toContain("clip.GetClipProperty('File Path')");
-  expect(script).toContain("clip.AddMarker(marker['frame'], 'Blue', marker['name'], marker['note'], marker['duration'])");
-  expect(script).toContain('"frame": 24');
-  expect(script).toContain('"duration": 36');
-  expect(script).toContain('Walking shot');
-  expect(script).toContain('rating: 4\\nkeyword: nature');
-  expect(script).not.toContain('Point marker');
+  expect(script).toContain('source_path + SIDECAR_SUFFIX');
+  expect(script).toContain("clip.AddMarker(frame, 'Blue', marker['name'], marker['note'], marker['duration'], custom_data)");
+  expect(script).toContain('clip.DeleteMarkerAtFrame(frame)');
+  expect(script).not.toContain('Proxy');
 });
 
 // https://github.com/mifi/lossless-cut/issues/1024

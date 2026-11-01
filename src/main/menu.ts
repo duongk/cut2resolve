@@ -185,9 +185,15 @@ export default ({ app, mainWindow, newVersion, isStoreBuild, openExternal }: {
               },
             },
             {
-              label: esc(t('DaVinci Resolve Media Pool markers (script)')),
+              label: esc(t('DaVinci Resolve marker sidecar')),
               click() {
-                mainWindow.webContents.send('exportEdlFile', 'resolve-marker-script');
+                mainWindow.webContents.send('exportEdlFile', 'resolve-marker-manifest');
+              },
+            },
+            {
+              label: esc(t('DaVinci Resolve marker importer script')),
+              click() {
+                mainWindow.webContents.send('exportEdlFile', 'resolve-marker-importer-script');
               },
             },
             {

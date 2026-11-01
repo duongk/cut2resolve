@@ -3,7 +3,7 @@ import i18n from 'i18next';
 import invariant from 'tiny-invariant';
 import { ZodError } from 'zod';
 
-import { parseSrtToSegments, formatSrt, parseCuesheet, parseXmeml, parseFcpXml, parseCsv, parseCutlist, parsePbf, parseEdl, formatCsvHuman, formatTsvHuman, formatCsvFrames, formatCsvSeconds, formatResolveMarkerScript, parseCsvTime, getFrameValParser, parseDvAnalyzerSummaryTxt, parseOtio } from './edlFormats';
+import { parseSrtToSegments, formatSrt, parseCuesheet, parseXmeml, parseFcpXml, parseCsv, parseCutlist, parsePbf, parseEdl, formatCsvHuman, formatTsvHuman, formatCsvFrames, formatCsvSeconds, formatResolveMarkerImporterScript, formatResolveMarkerManifest, parseCsvTime, getFrameValParser, parseDvAnalyzerSummaryTxt, parseOtio } from './edlFormats';
 import { askForYouTubeInput, showOpenDialog } from './dialogs';
 import { getOutPath } from './util';
 import type { EdlExportType, EdlFileType, EdlImportType, GetFrameCount, LlcProject, SegmentBase, StateSegment } from './types';
@@ -217,14 +217,19 @@ export async function exportEdlFile({ type, cutSegments, customOutDir, filePath,
       filters = [{ name: i18n.t('LosslessCut project'), extensions: [ext, 'llc'] }];
       break;
     }
-    case 'resolve-marker-script': {
+    case 'resolve-marker-manifest': {
+      ext = 'resolve-markers.json';
+      filters = [{ name: i18n.t('DaVinci Resolve marker sidecar'), extensions: ['json'] }];
+      break;
+    }
+    case 'resolve-marker-importer-script': {
       ext = 'py';
       filters = [{ name: i18n.t('DaVinci Resolve script'), extensions: [ext] }];
       break;
     }
   }
 
-  const defaultPath = getOutPath({ filePath, customOutDir, fileName: `${basename(filePath)}.${ext}` });
+  const defaultPath = getOutPath({ filePath, customOutDir: type === 'resolve-marker-manifest' ? undefined : customOutDir, fileName: `${basename(filePath)}.${ext}` });
 
   const { canceled, filePath: savePath } = await dialog.showSaveDialog({ defaultPath, title: i18n.t('Export project'), ...(filters != null ? { filters } : {}) });
   if (canceled || !savePath) return;
@@ -236,5 +241,6 @@ export async function exportEdlFile({ type, cutSegments, customOutDir, filePath,
   else if (type === 'csv-frames') await saveCsvFrames({ path: savePath, cutSegments, getFrameCount });
   else if (type === 'llc') await saveLlcProject({ savePath, mediaFilePath: filePath, cutSegments });
   else if (type === 'srt') await saveSrt(savePath, cutSegments);
-  else if (type === 'resolve-marker-script') await writeFile(savePath, formatResolveMarkerScript({ mediaFilePath: filePath, cutSegments, getFrameCount }));
+  else if (type === 'resolve-marker-manifest') await writeFile(savePath, formatResolveMarkerManifest({ mediaFilePath: filePath, cutSegments, getFrameCount }));
+  else if (type === 'resolve-marker-importer-script') await writeFile(savePath, formatResolveMarkerImporterScript());
 }
