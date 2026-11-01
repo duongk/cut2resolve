@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactEventHandler, FocusEventHandler, DragEventHandler } from 'react';
+import type * as os from 'node:os';
 import { memo, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { FaRegTimesCircle } from 'react-icons/fa';
 import { MdRotate90DegreesCcw } from 'react-icons/md';
@@ -130,6 +131,7 @@ import { parse as parsePath, join as pathJoin, basename, dirname } from './util/
 
 const { ipcRenderer, webUtils } = window.require('electron');
 const { lstat } = window.require('node:fs/promises');
+const { homedir } = window.require('@electron/remote').require('node:os') as typeof os;
 const { hasDisabledNetworking, pathToFileURL, lossyMode, isLinux } = window.require('@electron/remote').require('./index.js');
 
 
@@ -192,7 +194,7 @@ function App() {
   // Batch state / concat files
   const [batchFiles, setBatchFiles] = useState<BatchFile[]>([]);
   const [selectedBatchFiles, setSelectedBatchFiles] = useState<string[]>([]);
-  const [folderPath, setFolderPath] = useState<string>();
+  const [folderPath, setFolderPath] = useState<string | undefined>(() => homedir());
 
   const allUserSettings = useUserSettingsRoot();
   const { captureFormat, keyframeCut, preserveMetadata, preserveMetadataOnMerge, preserveMovData, preserveChapters, movFastStart, avoidNegativeTs, autoMerge, timecodeFormat, invertCutSegments, autoExportExtraStreams, askBeforeClose, enableImportChapters, enableAskForFileOpenAction, playbackVolume, autoSaveProjectFile, wheelSensitivity, waveformHeight, invertTimelineScroll, language, ffmpegExperimental, hideNotifications, hideOsNotifications, autoLoadTimecode, autoDeleteMergedSegments, exportConfirmEnabled, segmentsToChapters, simpleMode, cutFileTemplate, cutMergedFileTemplate, mergedFileTemplate, keyboardSeekAccFactor, keyboardNormalSeekSpeed, keyboardSeekSpeed2, keyboardSeekSpeed3, treatInputFileModifiedTimeAsStart, treatOutputFileModifiedTimeAsStart, outFormatLocked, safeOutputFileName, enableAutoHtml5ify, segmentsToChaptersOnly, keyBindings, enableSmartCut, customFfPath, storeProjectInWorkingDir, enableOverwriteOutput, mouseWheelZoomModifierKey, mouseWheelFrameSeekModifierKey, mouseWheelKeyframeSeekModifierKey, captureFrameMethod, captureFrameQuality, captureFrameFileNameFormat, enableNativeHevc, cleanupChoices, preferStrongColors, outputFileNameMinZeroPadding, cutFromAdjustmentFrames, cutToAdjustmentFrames, waveformMode: waveformModePreference, thumbnailsEnabled, keyframesEnabled, reducedMotion, ffmpegHwaccel, videoFit } = allUserSettings.settings;
@@ -1837,7 +1839,7 @@ function App() {
     });
   }, []);
 
-  const userOpenFiles = useCallback(async (newFilePathsIn?: string[]) => {
+  const userOpenFiles = useCallback(async (newFilePathsIn?: string[], requestedAction?: OpenFileResponse) => {
     await withErrorHandling(async () => {
       let newFilePaths = newFilePathsIn;
       if (!newFilePaths || newFilePaths.length === 0) return;
@@ -1916,10 +1918,13 @@ function App() {
         const inputOptionsKeys = Object.keys(inputOptions) as (keyof typeof inputOptions)[];
 
         let openFileResponse: OpenFileResponse | undefined;
-        if (inputOptionsKeys.length === 1) [openFileResponse] = inputOptionsKeys;
-        if (!enableAskForFileOpenAction && inputOptionsKeys.length > 1) openFileResponse = 'addToBatch';
-        if (enableAskForFileOpenAction && inputOptionsKeys.length > 1) openFileResponse = await askForFileOpenAction(Object.entries(inputOptions) as [OpenFileResponse, string][]);
-        else if (newFilePaths.length === 1) openFileResponse = 'open';
+        if (requestedAction != null) openFileResponse = requestedAction;
+        else {
+          if (inputOptionsKeys.length === 1) [openFileResponse] = inputOptionsKeys;
+          if (!enableAskForFileOpenAction && inputOptionsKeys.length > 1) openFileResponse = 'addToBatch';
+          if (enableAskForFileOpenAction && inputOptionsKeys.length > 1) openFileResponse = await askForFileOpenAction(Object.entries(inputOptions) as [OpenFileResponse, string][]);
+          else if (newFilePaths.length === 1) openFileResponse = 'open';
+        }
 
         if (openFileResponse === 'open') {
           await userOpenSingleFile({ path: firstNewFilePath, isLlcProject });
@@ -2564,7 +2569,9 @@ function App() {
                         folderPath={folderPath}
                         selectedPath={filePath}
                         width={leftBarWidth}
-                        onSelectFile={(path) => { userOpenFiles([path]); }}
+                        hasOpenFile={isFileOpened}
+                        onFileAction={(path, action) => { userOpenFiles([path], action); }}
+                        onChangeFolder={openFolderBrowserDialog}
                         onClose={() => setFolderPath(undefined)}
                       />
                     ) : showLeftBar && (

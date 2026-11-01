@@ -36,12 +36,6 @@ export default ({ app, mainWindow, newVersion, isStoreBuild, openExternal }: {
           },
         },
         {
-          label: esc(t('Open folder')),
-          async click() {
-            mainWindow.webContents.send('openDirDialog');
-          },
-        },
-        {
           label: esc(t('Open URL')),
           async click() {
             mainWindow.webContents.send('promptDownloadMediaUrl');

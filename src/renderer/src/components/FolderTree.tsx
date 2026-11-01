@@ -1,8 +1,9 @@
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FaChevronDown, FaChevronRight, FaFileVideo, FaFolder, FaFolderOpen, FaSync, FaTimes } from 'react-icons/fa';
 import { useTranslation } from 'react-i18next';
 
 import { controlsBackground, darkModeTransition, primaryColor } from '../colors';
+import useContextMenu from '../hooks/useContextMenu';
 import { basename, extname, join } from '../util/path';
 
 
@@ -14,11 +15,46 @@ const mediaExtensions = new Set([
 
 const rowStyle = { display: 'flex', alignItems: 'center', gap: '.35em', width: '100%', minWidth: 0, padding: '.28em .4em', color: 'inherit', background: 'none', border: 0, textAlign: 'left', cursor: 'pointer' } as const;
 
-function Directory({ path, depth, selectedPath, onSelectFile }: {
+type FolderFileAction = 'open' | 'tracks' | 'addToBatch' | 'mergeWithCurrentFile';
+
+function MediaFile({ path, name, depth, selectedPath, hasOpenFile, onFileAction }: {
+  path: string,
+  name: string,
+  depth: number,
+  selectedPath: string | undefined,
+  hasOpenFile: boolean,
+  onFileAction: (path: string, action: FolderFileAction) => void,
+}) {
+  const { t } = useTranslation();
+  const ref = useRef<HTMLButtonElement>(null);
+  const contextMenuTemplate = useMemo(() => [
+    { label: t('Open'), click: () => onFileAction(path, 'open') },
+    ...(hasOpenFile ? [{ label: t('Include all tracks from the new file'), click: () => onFileAction(path, 'tracks') }] : []),
+    { label: t('Add the file to the batch list'), click: () => onFileAction(path, 'addToBatch') },
+    ...(hasOpenFile ? [{ label: t('Merge/concatenate with current file'), click: () => onFileAction(path, 'mergeWithCurrentFile') }] : []),
+  ], [hasOpenFile, onFileAction, path, t]);
+  useContextMenu(ref, contextMenuTemplate);
+
+  return (
+    <button
+      type="button"
+      ref={ref}
+      title={path}
+      style={{ ...rowStyle, paddingLeft: `${depth * 14 + 6}px`, background: selectedPath === path ? 'var(--gray-7)' : undefined }}
+      onClick={() => onFileAction(path, 'open')}
+    >
+      <FaFileVideo {...(selectedPath === path ? { color: primaryColor } : {})} />
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+    </button>
+  );
+}
+
+function Directory({ path, depth, selectedPath, hasOpenFile, onFileAction }: {
   path: string,
   depth: number,
   selectedPath: string | undefined,
-  onSelectFile: (path: string) => void,
+  hasOpenFile: boolean,
+  onFileAction: (path: string, action: FolderFileAction) => void,
 }) {
   const { t } = useTranslation();
   interface TreeEntry { name: string, path: string, isDirectory: boolean }
@@ -68,18 +104,7 @@ function Directory({ path, depth, selectedPath, onSelectFile }: {
       {expanded && (
         <>
           {entries?.map((entry) => (
-            entry.isDirectory ? <Directory key={entry.path} path={entry.path} depth={depth + 1} selectedPath={selectedPath} onSelectFile={onSelectFile} /> : (
-              <button
-                type="button"
-                key={entry.path}
-                title={entry.path}
-                style={{ ...rowStyle, paddingLeft: `${(depth + 1) * 14 + 6}px`, background: selectedPath === entry.path ? 'var(--gray-7)' : undefined }}
-                onClick={() => onSelectFile(entry.path)}
-              >
-                <FaFileVideo {...(selectedPath === entry.path ? { color: primaryColor } : {})} />
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.name}</span>
-              </button>
-            )
+            entry.isDirectory ? <Directory key={entry.path} path={entry.path} depth={depth + 1} selectedPath={selectedPath} hasOpenFile={hasOpenFile} onFileAction={onFileAction} /> : <MediaFile key={entry.path} path={entry.path} name={entry.name} depth={depth + 1} selectedPath={selectedPath} hasOpenFile={hasOpenFile} onFileAction={onFileAction} />
           ))}
           {entries?.length === 0 && <div style={{ padding: '.2em .5em .2em', paddingLeft: `${(depth + 1) * 14 + 6}px`, color: 'var(--gray-10)', fontSize: '.85em' }}>{t('No media files')}</div>}
           {error && <div title={error} style={{ padding: '.2em .5em', color: 'var(--red-10)', fontSize: '.8em' }}>{t('Unable to read folder')}</div>}
@@ -89,11 +114,13 @@ function Directory({ path, depth, selectedPath, onSelectFile }: {
   );
 }
 
-function FolderTree({ folderPath, selectedPath, width, onSelectFile, onClose }: {
+function FolderTree({ folderPath, selectedPath, width, hasOpenFile, onFileAction, onChangeFolder, onClose }: {
   folderPath: string,
   selectedPath: string | undefined,
   width: number,
-  onSelectFile: (path: string) => void,
+  hasOpenFile: boolean,
+  onFileAction: (path: string, action: FolderFileAction) => void,
+  onChangeFolder: () => void,
   onClose: () => void,
 }) {
   const { t } = useTranslation();
@@ -102,9 +129,10 @@ function FolderTree({ folderPath, selectedPath, width, onSelectFile, onClose }: 
       <div style={{ padding: '.35em .5em', display: 'flex', alignItems: 'center', gap: '.4em', borderBottom: '1px solid var(--gray-7)' }}>
         <span style={{ fontSize: '.85em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('Folder browser')}</span>
         <div style={{ flexGrow: 1 }} />
+        <button type="button" title={t('Choose folder')} style={{ ...rowStyle, width: 'auto', padding: '.2em' }} onClick={onChangeFolder}><FaFolderOpen /></button>
         <button type="button" title={t('Close folder browser')} style={{ ...rowStyle, width: 'auto', padding: '.2em' }} onClick={onClose}><FaTimes /></button>
       </div>
-      <Directory path={folderPath} depth={0} selectedPath={selectedPath} onSelectFile={onSelectFile} />
+      <Directory path={folderPath} depth={0} selectedPath={selectedPath} hasOpenFile={hasOpenFile} onFileAction={onFileAction} />
     </aside>
   );
 }
