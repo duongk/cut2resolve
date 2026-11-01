@@ -95,6 +95,15 @@ export async function saveLlcProject({ savePath, mediaFilePath, cutSegments }: {
   await writeFile(savePath, JSON5.stringify(projectData, null, 2));
 }
 
+export async function saveResolveMarkerManifest({ savePath, mediaFilePath, cutSegments, getFrameCount }: {
+  savePath: string,
+  mediaFilePath: string,
+  cutSegments: StateSegment[],
+  getFrameCount: GetFrameCount,
+}) {
+  await writeFile(savePath, formatResolveMarkerManifest({ mediaFilePath, cutSegments, getFrameCount }));
+}
+
 export async function loadLlcProject(path: string) {
   const json = JSON5.parse(await readFile(path, 'utf8'));
 
@@ -241,6 +250,6 @@ export async function exportEdlFile({ type, cutSegments, customOutDir, filePath,
   else if (type === 'csv-frames') await saveCsvFrames({ path: savePath, cutSegments, getFrameCount });
   else if (type === 'llc') await saveLlcProject({ savePath, mediaFilePath: filePath, cutSegments });
   else if (type === 'srt') await saveSrt(savePath, cutSegments);
-  else if (type === 'resolve-marker-manifest') await writeFile(savePath, formatResolveMarkerManifest({ mediaFilePath: filePath, cutSegments, getFrameCount }));
+  else if (type === 'resolve-marker-manifest') await saveResolveMarkerManifest({ savePath, mediaFilePath: filePath, cutSegments, getFrameCount });
   else if (type === 'resolve-marker-importer-script') await writeFile(savePath, formatResolveMarkerImporterScript());
 }

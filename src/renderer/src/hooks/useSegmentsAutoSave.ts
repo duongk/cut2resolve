@@ -3,26 +3,29 @@ import { useDebounce } from 'use-debounce';
 import isEqual from 'lodash/isEqual';
 
 import isDev from '../isDev';
-import { saveLlcProject } from '../edlStore';
+import { saveLlcProject, saveResolveMarkerManifest } from '../edlStore';
 import { mapSaveableSegments } from '../segments';
-import { getSuffixedOutPath } from '../util';
-import type { StateSegment } from '../types';
+import { getOutPath, getSuffixedOutPath } from '../util';
+import { basename } from '../util/path';
+import type { GetFrameCount, StateSegment } from '../types';
 import { errorToast } from '../swal';
 import i18n from '../i18n';
 
 
-export default ({ autoSaveProjectFile, storeProjectInWorkingDir, filePath, customOutDir, cutSegments }: {
+export default ({ autoSaveProjectFile, storeProjectInWorkingDir, filePath, customOutDir, cutSegments, getFrameCount }: {
   autoSaveProjectFile: boolean,
   storeProjectInWorkingDir: boolean,
   filePath: string | undefined,
   customOutDir: string | undefined,
   cutSegments: StateSegment[],
+  getFrameCount: GetFrameCount,
 }) => {
   const projectSuffix = 'proj.llc';
   // New LLC format can be stored along with input file or in working dir (customOutDir)
   const getEdlFilePath = useCallback((fp?: string, cod?: string) => getSuffixedOutPath({ customOutDir: cod, filePath: fp, nameSuffix: projectSuffix }), []);
   const getProjectFileSavePath = useCallback((storeProjectInWorkingDirIn: boolean) => getEdlFilePath(filePath, storeProjectInWorkingDirIn ? customOutDir : undefined), [getEdlFilePath, filePath, customOutDir]);
   const projectFileSavePath = useMemo(() => getProjectFileSavePath(storeProjectInWorkingDir), [getProjectFileSavePath, storeProjectInWorkingDir]);
+  const resolveMarkerSavePath = useMemo(() => (filePath == null ? undefined : getOutPath({ filePath, fileName: `${basename(filePath)}.resolve-markers.json` })), [filePath]);
 
   const currentSaveOperation = useMemo(() => {
     if (!projectFileSavePath) return undefined;
@@ -55,7 +58,10 @@ export default ({ autoSaveProjectFile, storeProjectInWorkingDir, filePath, custo
         }
 
         console.log('Saving project file', debouncedSaveOperation.projectFileSavePath, debouncedSaveOperation.cutSegments);
-        await saveLlcProject({ savePath: debouncedSaveOperation.projectFileSavePath, mediaFilePath: debouncedSaveOperation.filePath, cutSegments: debouncedSaveOperation.cutSegments });
+        await Promise.all([
+          saveLlcProject({ savePath: debouncedSaveOperation.projectFileSavePath, mediaFilePath: debouncedSaveOperation.filePath, cutSegments: debouncedSaveOperation.cutSegments }),
+          resolveMarkerSavePath == null ? undefined : saveResolveMarkerManifest({ savePath: resolveMarkerSavePath, mediaFilePath: debouncedSaveOperation.filePath, cutSegments: debouncedSaveOperation.cutSegments, getFrameCount }),
+        ]);
         lastSaveOperation.current = debouncedSaveOperation;
       } catch (err) {
         errorToast(i18n.t('Unable to save project file'));
@@ -63,7 +69,7 @@ export default ({ autoSaveProjectFile, storeProjectInWorkingDir, filePath, custo
       }
     }
     save();
-  }, [debouncedSaveOperation, autoSaveProjectFile]);
+  }, [debouncedSaveOperation, autoSaveProjectFile, getFrameCount, resolveMarkerSavePath]);
 
   return {
     getEdlFilePath,

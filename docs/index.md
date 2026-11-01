@@ -69,7 +69,7 @@ Same as CSV but `<tab>` instead.
 1. Once, use **File → Export project → DaVinci Resolve marker importer script** and copy the exported `.py` file into Resolve's user script folder. Restart Resolve or refresh its Scripts menu:
    - macOS: `~/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/Scripts/Utility/`
    - Windows: `%AppData%\Blackmagic Design\DaVinci Resolve\Fusion\Scripts\Utility\`
-2. For each source logged in LosslessCut, save its marker sidecar beside the original file. Keep the sidecar with the source when moving or copying media.
+2. With **Auto save project file** enabled in Settings, LosslessCut automatically writes and updates each marker sidecar beside its original file after range changes. Keep the sidecar with the source when moving or copying media. You can also export one manually.
 3. In Resolve, import the original source clips into the Media Pool. Do not import a proxy in their place.
 4. Run the one importer from **Workspace → Scripts → Utility**. It processes every imported original that has its adjacent sidecar.
 
