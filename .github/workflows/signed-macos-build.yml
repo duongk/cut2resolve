@@ -1,0 +1,75 @@
+name: Signed and notarized macOS build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    name: Signed macOS DMGs
+    runs-on: macos-latest
+    timeout-minutes: 60
+    env:
+      # `CSC_LINK` is a base64-encoded Developer ID Application .p12 certificate.
+      CSC_LINK: ${{ secrets.mac_certs }}
+      CSC_KEY_PASSWORD: ${{ secrets.mac_certs_password }}
+      APPLE_API_KEY_ID: ${{ secrets.api_key_id }}
+      APPLE_API_ISSUER: ${{ secrets.api_key_issuer_id }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Verify signing secrets are configured
+        env:
+          APPLE_API_KEY_P8: ${{ secrets.api_key }}
+        run: |
+          test -n "$CSC_LINK"
+          test -n "$CSC_KEY_PASSWORD"
+          test -n "$APPLE_API_KEY_ID"
+          test -n "$APPLE_API_ISSUER"
+          test -n "$APPLE_API_KEY_P8"
+
+      - name: Prepare Apple notarization key
+        env:
+          APPLE_API_KEY_P8: ${{ secrets.api_key }}
+        run: |
+          key_path="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
+          printf '%s' "$APPLE_API_KEY_P8" > "$key_path"
+          echo "APPLE_API_KEY=$key_path" >> "$GITHUB_ENV"
+
+      - run: yarn install --immutable --network-timeout 1000000
+
+      - name: Download bundled FFmpeg
+        run: |
+          yarn download-ffmpeg-darwin-x64
+          yarn download-ffmpeg-darwin-arm64
+
+      - run: yarn build
+
+      - name: Package, sign, and notarize macOS DMGs
+        run: yarn electron-builder --mac dmg --x64 --arm64 --publish never
+
+      - name: Verify signed and notarized deliverables
+        run: |
+          find dist -type d -name '*.app' -print0 | while IFS= read -r -d '' app; do
+            codesign --verify --deep --strict --verbose=2 "$app"
+          done
+          find dist -type f -name '*.dmg' -print0 | while IFS= read -r -d '' dmg; do
+            xcrun stapler validate "$dmg"
+            spctl --assess --type open --verbose=4 "$dmg"
+          done
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: cut2resolve-mac-signed-notarized
+          path: |
+            dist/cut2resolve-mac-arm64.dmg
+            dist/cut2resolve-mac-x64.dmg
+          if-no-files-found: error

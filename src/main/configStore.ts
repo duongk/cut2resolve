@@ -40,14 +40,12 @@ const defaultKeyBindings: KeyBinding[] = [
   { keys: 'KeyT', action: 'toggleStripAll' },
   { keys: 'ShiftLeft+KeyT', action: 'toggleStripCurrentFilter' },
 
-  { keys: 'ArrowLeft', action: 'seekBackwards' },
   { keys: 'ControlLeft+ShiftLeft+ArrowLeft', action: 'seekBackwards2' },
   { keys: 'ControlLeft+ArrowLeft', action: 'seekBackwardsPercent' },
   { keys: 'MetaLeft+ArrowLeft', action: 'seekBackwardsPercent' },
   { keys: 'AltLeft+ArrowLeft', action: 'seekBackwardsKeyframe' },
   { keys: 'ShiftLeft+ArrowLeft', action: 'jumpCutStart' },
 
-  { keys: 'ArrowRight', action: 'seekForwards' },
   { keys: 'ControlLeft+ShiftLeft+ArrowRight', action: 'seekForwards2' },
   { keys: 'ControlLeft+ArrowRight', action: 'seekForwardsPercent' },
   { keys: 'MetaLeft+ArrowRight', action: 'seekForwardsPercent' },
@@ -58,7 +56,7 @@ const defaultKeyBindings: KeyBinding[] = [
   { keys: 'ControlLeft+End', action: 'jumpTimelineEnd' },
 
   { keys: 'PageUp', action: 'jumpFirstSegment' },
-  { keys: 'ArrowUp', action: 'jumpPrevSegment' },
+  { keys: 'ArrowLeft', action: 'jumpPrevSegment' },
   { keys: 'ShiftLeft+AltLeft+PageUp', action: 'jumpSeekFirstSegment' },
   { keys: 'ShiftLeft+AltLeft+ArrowUp', action: 'jumpSeekPrevSegment' },
   { keys: 'ControlLeft+ArrowUp', action: 'timelineZoomIn' },
@@ -67,7 +65,7 @@ const defaultKeyBindings: KeyBinding[] = [
   { keys: 'ControlLeft+ShiftLeft+ArrowUp', action: 'batchOpenPreviousFile' },
 
   { keys: 'PageDown', action: 'jumpLastSegment' },
-  { keys: 'ArrowDown', action: 'jumpNextSegment' },
+  { keys: 'ArrowRight', action: 'jumpNextSegment' },
   { keys: 'ShiftLeft+AltLeft+PageDown', action: 'jumpSeekLastSegment' },
   { keys: 'ShiftLeft+AltLeft+ArrowDown', action: 'jumpSeekNextSegment' },
   { keys: 'ControlLeft+ArrowDown', action: 'timelineZoomOut' },
