@@ -185,6 +185,12 @@ export default ({ app, mainWindow, newVersion, isStoreBuild, openExternal }: {
               },
             },
             {
+              label: esc(t('DaVinci Resolve Media Pool markers (script)')),
+              click() {
+                mainWindow.webContents.send('exportEdlFile', 'resolve-marker-script');
+              },
+            },
+            {
               label: esc(t('Start times as YouTube Chapters')),
               click() {
                 mainWindow.webContents.send('exportYouTube');

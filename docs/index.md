@@ -62,6 +62,20 @@ LosslessCut default project file `.llc` is in a JSON5 format. It contains inform
 
 Same as CSV but `<tab>` instead.
 
+### DaVinci Resolve Media Pool duration markers
+
+**File → Export project → DaVinci Resolve Media Pool markers (script)** creates a Python script containing the named segments for the currently opened source clip. It is intended for logging: every segment with an In and Out point becomes a blue duration marker; its label becomes the marker name and its tags become the marker note. Segments with no Out point are not exported.
+
+1. In Resolve, import the original source clip into the Media Pool. Do not import a proxy in its place.
+2. Copy the exported `.py` file into Resolve's user script folder and restart Resolve or refresh its Scripts menu:
+   - macOS: `~/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/Scripts/Utility/`
+   - Windows: `%AppData%\Blackmagic Design\DaVinci Resolve\Fusion\Scripts\Utility\`
+3. Run it from **Workspace → Scripts → Utility**.
+
+The script identifies the one matching Media Pool item by its full original-file path, then adds markers using Resolve's Media Pool scripting API. It will not import, move, relink, transcode, or modify the original file. It does not scan or change a `Proxy` subfolder. It deliberately stops if the original source is absent or has been imported more than once, rather than guessing based on a filename.
+
+Resolve allows only one marker at a given source frame. Existing markers are left untouched; the script reports any range it could not add. Keep the `.llc` project as the portable source of truth and export a fresh script after changing its ranges.
+
 ## More
 
 - [🚀 Getting started](getting-started.md)

@@ -1,7 +1,7 @@
 import { it, describe, expect, test } from 'vitest';
 
 import type { Otio } from './edlFormats';
-import { parseSrtToSegments, formatSrt, parseYouTube, formatYouTube, parseMplayerEdl, parseXmeml, parseFcpXml, parseCsv, parseCsvTime, getFrameValParser, formatCsvFrames, getFrameCountRaw, parsePbf, parseDvAnalyzerSummaryTxt, parseCutlist, parseDjiGps1, parseOtio, parseDjiGps2 } from './edlFormats';
+import { parseSrtToSegments, formatSrt, parseYouTube, formatYouTube, parseMplayerEdl, parseXmeml, parseFcpXml, parseCsv, parseCsvTime, getFrameValParser, formatCsvFrames, formatResolveMarkerScript, getFrameCountRaw, parsePbf, parseDvAnalyzerSummaryTxt, parseCutlist, parseDjiGps1, parseOtio, parseDjiGps2 } from './edlFormats';
 import { readFixture, readFixtureBinary } from './test/util';
 import otioFixture from './test/fixtures/otio';
 
@@ -234,6 +234,25 @@ it('parses fcpxml with single asset-clip, whole second times and missing start',
   </fcpxml>`;
   expect(parseFcpXml(getXml('<asset-clip offset="0s" name="Single" start="10/2s" duration="20/2s"/>'))).toStrictEqual([{ start: 5, end: 15 }]);
   expect(parseFcpXml(getXml('<asset-clip offset="0s" start="0s" duration="10s"/><asset-clip offset="10s" duration="2.5s"/>'))).toStrictEqual([{ start: 0, end: 10 }, { start: 0, end: 2.5 }]);
+});
+
+it('formats a Resolve script that adds duration markers to the existing source clip', () => {
+  const script = formatResolveMarkerScript({
+    mediaFilePath: '/Volumes/Video Library/2026/10/C0001.MP4',
+    cutSegments: [
+      { start: 1, end: 2.5, name: 'Walking shot', tags: { rating: '4', keyword: 'nature' } },
+      { start: 4, name: 'Point marker' },
+    ],
+    getFrameCount: (seconds) => Math.round(seconds * 24),
+  });
+
+  expect(script).toContain("clip.GetClipProperty('File Path')");
+  expect(script).toContain("clip.AddMarker(marker['frame'], 'Blue', marker['name'], marker['note'], marker['duration'])");
+  expect(script).toContain('"frame": 24');
+  expect(script).toContain('"duration": 36');
+  expect(script).toContain('Walking shot');
+  expect(script).toContain('rating: 4\\nkeyword: nature');
+  expect(script).not.toContain('Point marker');
 });
 
 // https://github.com/mifi/lossless-cut/issues/1024

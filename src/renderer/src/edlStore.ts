@@ -3,7 +3,7 @@ import i18n from 'i18next';
 import invariant from 'tiny-invariant';
 import { ZodError } from 'zod';
 
-import { parseSrtToSegments, formatSrt, parseCuesheet, parseXmeml, parseFcpXml, parseCsv, parseCutlist, parsePbf, parseEdl, formatCsvHuman, formatTsvHuman, formatCsvFrames, formatCsvSeconds, parseCsvTime, getFrameValParser, parseDvAnalyzerSummaryTxt, parseOtio } from './edlFormats';
+import { parseSrtToSegments, formatSrt, parseCuesheet, parseXmeml, parseFcpXml, parseCsv, parseCutlist, parsePbf, parseEdl, formatCsvHuman, formatTsvHuman, formatCsvFrames, formatCsvSeconds, formatResolveMarkerScript, parseCsvTime, getFrameValParser, parseDvAnalyzerSummaryTxt, parseOtio } from './edlFormats';
 import { askForYouTubeInput, showOpenDialog } from './dialogs';
 import { getOutPath } from './util';
 import type { EdlExportType, EdlFileType, EdlImportType, GetFrameCount, LlcProject, SegmentBase, StateSegment } from './types';
@@ -217,6 +217,11 @@ export async function exportEdlFile({ type, cutSegments, customOutDir, filePath,
       filters = [{ name: i18n.t('LosslessCut project'), extensions: [ext, 'llc'] }];
       break;
     }
+    case 'resolve-marker-script': {
+      ext = 'py';
+      filters = [{ name: i18n.t('DaVinci Resolve script'), extensions: [ext] }];
+      break;
+    }
   }
 
   const defaultPath = getOutPath({ filePath, customOutDir, fileName: `${basename(filePath)}.${ext}` });
@@ -231,4 +236,5 @@ export async function exportEdlFile({ type, cutSegments, customOutDir, filePath,
   else if (type === 'csv-frames') await saveCsvFrames({ path: savePath, cutSegments, getFrameCount });
   else if (type === 'llc') await saveLlcProject({ savePath, mediaFilePath: filePath, cutSegments });
   else if (type === 'srt') await saveSrt(savePath, cutSegments);
+  else if (type === 'resolve-marker-script') await writeFile(savePath, formatResolveMarkerScript({ mediaFilePath: filePath, cutSegments, getFrameCount }));
 }

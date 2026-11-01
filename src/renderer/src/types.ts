@@ -89,7 +89,7 @@ export type EdlFileType = 'llc' | 'csv' | 'csv-frames' | 'cutlist' | 'xmeml' | '
 
 export type EdlImportType = 'youtube' | EdlFileType;
 
-export type EdlExportType = 'csv' | 'tsv-human' | 'csv-human' | 'csv-frames' | 'srt' | 'llc';
+export type EdlExportType = 'csv' | 'tsv-human' | 'csv-human' | 'csv-frames' | 'srt' | 'llc' | 'resolve-marker-script';
 
 export type TunerType = 'wheelSensitivity' | 'waveformHeight' | 'keyboardNormalSeekSpeed' | 'keyboardSeekSpeed2' | 'keyboardSeekSpeed3' | 'keyboardSeekAccFactor';
 
