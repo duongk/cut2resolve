@@ -20,6 +20,7 @@ import { saveColor, controlsBackground, primaryTextColor, darkModeTransition } f
 import { useSegColors } from './contexts';
 import { getSegmentTags } from './segments';
 import TagEditor, { cancelTagEditOnEscape } from './components/TagEditor';
+import TextInput from './components/TextInput';
 import type { ContextMenuTemplate, DefiniteSegmentBase, FormatTimecode, GetFrameCount, InverseCutSegment, SegmentBase, SegmentColorIndex, SegmentTags, StateSegment } from './types';
 import type { UseSegments } from './hooks/useSegments';
 import * as Dialog from './components/Dialog';
@@ -66,6 +67,7 @@ const Segment = memo(({
   onExtractSelectedSegmentsFramesAsImages,
   onInvertSelectedSegments,
   onDuplicateSegmentClick,
+  updateSegAtIndex,
   getSegEstimatedSize,
 }: {
   seg: StateSegment | InverseCutSegment,
@@ -98,6 +100,7 @@ const Segment = memo(({
   onExtractSelectedSegmentsFramesAsImages: () => void,
   onInvertSelectedSegments: UseSegments['invertSelectedSegments'],
   onDuplicateSegmentClick: UseSegments['duplicateSegment'],
+  updateSegAtIndex: UseSegments['updateSegAtIndex'],
   getSegEstimatedSize: UseSegments['getSegEstimatedSize'],
 }) => {
   const { invertCutSegments, darkMode } = useUserSettings();
@@ -261,9 +264,33 @@ const Segment = memo(({
         <span style={{ cursor, fontSize: `${Math.min(1, 26 / timeStr.length) * 0.75}em`, whiteSpace: 'nowrap' }}>{timeStr}</span>
       </div>
 
-      {'name' in seg && seg.name && <span style={{ fontSize: '.75em', color: primaryTextColor, marginRight: '.3em' }}>{seg.name}</span>}
-      {Object.entries(tags).map(([name, value]) => (
-        <span style={{ fontSize: '.7em', backgroundColor: 'var(--gray-5)', color: 'var(--gray-12)', borderRadius: '.4em', padding: '0 .2em', marginRight: '.1em' }} key={name}>{name}:<b>{value}</b></span>
+      {!invertCutSegments && 'name' in seg && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '.3em', marginTop: '.15em', marginRight: '1.7em' }}>
+          <span style={{ fontSize: '.7em', color: primaryTextColor }}>{t('Name')}</span>
+          <TextInput
+            aria-label={t('Name')}
+            defaultValue={seg.name}
+            key={`${seg.segId}:${seg.name}`}
+            maxLength={500}
+            placeholder={t('Name')}
+            onBlur={(event) => {
+              if (event.target.value !== seg.name) updateSegAtIndex(index, { name: event.target.value });
+            }}
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') event.currentTarget.blur();
+              else if (event.key === 'Escape') {
+                const input = event.currentTarget;
+                input.value = seg.name;
+                input.blur();
+              }
+            }}
+            style={{ minWidth: 0, padding: '.05em .3em' }}
+          />
+        </div>
+      )}
+      {Object.entries(tags).map(([tagName, value]) => (
+        <span style={{ fontSize: '.7em', backgroundColor: 'var(--gray-5)', color: 'var(--gray-12)', borderRadius: '.4em', padding: '0 .2em', marginRight: '.1em' }} key={tagName}>{tagName}:<b>{value}</b></span>
       ))}
 
       {duration != null && (
@@ -605,6 +632,7 @@ function SegmentList({
         onSelectAllMarkers={onSelectAllMarkers}
         onInvertSelectedSegments={onInvertSelectedSegments}
         onDuplicateSegmentClick={onDuplicateSegmentClick}
+        updateSegAtIndex={updateSegAtIndex}
         getSegEstimatedSize={getSegEstimatedSize}
       />
     );

@@ -30,6 +30,7 @@ Lossless cuts can only start at a keyframe, so a cut starts at the keyframe befo
 - Create segments from keyframes, and from the file's chapters
 - Invert, split, duplicate, shift, shuffle and combine segments, fill the gaps between them, and align them to keyframes
 - Give segments labels and tags
+- Edit a segment's label directly in the segment list
 - Select and change segments with a JavaScript-based [expression language](expressions.md)
 - [Import](index.md#importexport-projects) segments from MP4/MKV chapters, CSV, EDL (MPlayer, CMX 3600), YouTube chapters, Cutlist, CUE, DaVinci Resolve/Final Cut Pro XML, FCPXML, PotPlayer bookmarks, SRT subtitles, OpenTimelineIO and DV Analyzer
 - Export segments as CSV, TSV/TXT, SRT subtitles, YouTube chapter timestamps or DaVinci Resolve Media Pool duration-marker sidecars
