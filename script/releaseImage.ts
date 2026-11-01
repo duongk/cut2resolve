@@ -86,7 +86,7 @@ async function getBackground() {
   return { base: photo, layers: [{ input: blurred }] };
 }
 
-const icon = await sharp('src/renderer/src/icon.svg').resize(iconSize, iconSize).png().toBuffer();
+const icon = await sharp('src/renderer/src/icon.png').resize(iconSize, iconSize).png().toBuffer();
 
 const outPath = out ?? `dist/release-${version}${square ? '-square' : ''}.png`;
 await mkdir(dirname(outPath), { recursive: true });

@@ -1,8 +1,9 @@
 import sharp from 'sharp';
 import { writeFile } from 'node:fs/promises';
 
+const srcIcon = 'src/renderer/src/icon.png';
 
-const renderPng = (from: string, width: number, height: number) => sharp(from)
+const renderPng = (width: number, height: number) => sharp(srcIcon)
   .png()
   .resize(width, height, {
     fit: sharp.fit.contain,
@@ -10,12 +11,11 @@ const renderPng = (from: string, width: number, height: number) => sharp(from)
   })
   .toBuffer();
 
-// eslint-disable-next-line unicorn-js/no-unnecessary-parameters -- TODO fix (new rule in @mifi/lint-config)
-const svg2png = async (from: string, to: string, width: number, height: number) => (
-  writeFile(to, await renderPng(from, width, height))
+const png2png = async (to: string, width: number, height: number) => (
+  writeFile(to, await renderPng(width, height))
 );
 
-const renderSquarePngs = (from: string, sizes: number[]) => Promise.all(sizes.map(async (size) => ({ size, data: await renderPng(from, size, size) })));
+const renderSquarePngs = (sizes: number[]) => Promise.all(sizes.map(async (size) => ({ size, data: await renderPng(size, size) })));
 
 // https://en.wikipedia.org/wiki/ICO_(file_format)
 // PNG-compressed entries require Windows Vista or newer
@@ -76,23 +76,20 @@ function makeIcns(pngs: { size: number, data: Buffer }[]) {
   return Buffer.concat([fileHeader, ...chunks]);
 }
 
-const srcIcon = 'src/renderer/src/icon.svg';
-const srcMacIcon = 'src/renderer/src/icon-mac.svg';
-
 // Linux:
-await svg2png(srcIcon, 'icon-build/app-512.png', 512, 512);
+await png2png('icon-build/app-512.png', 512, 512);
 
 // Windows Store
-await svg2png(srcIcon, 'build-resources/appx/StoreLogo.png', 50, 50);
-await svg2png(srcIcon, 'build-resources/appx/Square150x150Logo.png', 300, 300);
-await svg2png(srcIcon, 'build-resources/appx/Square44x44Logo.png', 44, 44);
-await svg2png(srcIcon, 'build-resources/appx/Wide310x150Logo.png', 620, 300);
+await png2png('build-resources/appx/StoreLogo.png', 50, 50);
+await png2png('build-resources/appx/Square150x150Logo.png', 300, 300);
+await png2png('build-resources/appx/Square44x44Logo.png', 44, 44);
+await png2png('build-resources/appx/Wide310x150Logo.png', 620, 300);
 
 // MacOS:
 // https://github.com/mifi/lossless-cut/issues/1820
-await writeFile('icon-build/app.icns', makeIcns(await renderSquarePngs(srcMacIcon, [512, 1024])));
+await writeFile('icon-build/app.icns', makeIcns(await renderSquarePngs([512, 1024])));
 
 // Windows ICO:
 // https://github.com/mifi/lossless-cut/issues/778
 // https://stackoverflow.com/questions/3236115/which-icon-sizes-should-my-windows-applications-icon-include
-await writeFile('icon-build/app.ico', makeIco(await renderSquarePngs(srcIcon, [16, 24, 32, 40, 48, 64, 96, 128, 256, 512])));
+await writeFile('icon-build/app.ico', makeIco(await renderSquarePngs([16, 24, 32, 40, 48, 64, 96, 128, 256, 512])));

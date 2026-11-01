@@ -14,7 +14,7 @@ const outroDuration = 2.5;
 const fadeDuration = 0.4;
 const zoomDuration = 0.7;
 const maxZoom = 2.5;
-const iconPath = 'src/renderer/src/icon.svg';
+const iconPath = 'src/renderer/src/icon.png';
 
 const formats = {
   landscape: { width: 1280, height: 800, video: { width: 1280, height: 800, y: 0 }, captionSize: 34, captionY: () => 28 },
