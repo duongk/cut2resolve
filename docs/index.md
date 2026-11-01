@@ -66,9 +66,10 @@ Same as CSV but `<tab>` instead.
 
 **File → Export project → DaVinci Resolve marker sidecar** creates an adjacent `<original>.resolve-markers.json` file for the currently opened source clip. It is intended for logging: every segment with an In and Out point becomes a blue duration marker; its label becomes the marker name and its tags become the marker note. Segments with no Out point are not exported.
 
-1. Once, use **File → Export project → DaVinci Resolve marker importer script** and copy the exported `.py` file into Resolve's user script folder. Restart Resolve or refresh its Scripts menu:
+1. Once, use **File → Export project → Install DaVinci Resolve importer**. It installs `cut2resolve import.py` in Resolve's user script folder and opens that folder for you. Restart Resolve or refresh its Scripts menu:
    - macOS: `~/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/Scripts/Utility/`
    - Windows: `%AppData%\Blackmagic Design\DaVinci Resolve\Fusion\Scripts\Utility\`
+   You can alternatively use **DaVinci Resolve marker importer script** to save the same file anywhere manually.
 2. With **Auto save project file** enabled in Settings, LosslessCut automatically writes and updates each marker sidecar beside its original file after range changes. The Clip metadata panel above Segments to export stores its description, projects, keywords, rating and status in the same sidecar; it never changes the camera original. Keep the sidecar with the source when moving or copying media. You can also export one manually.
 3. In Resolve, import the original source clips into the Media Pool. Do not import a proxy in their place.
 4. Run the one importer from **Workspace → Scripts → Utility**. It processes every imported original that has its adjacent sidecar.

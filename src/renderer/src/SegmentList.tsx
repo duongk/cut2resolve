@@ -1,4 +1,4 @@
-import type { SetStateAction, Dispatch, MouseEventHandler, CSSProperties } from 'react';
+import type { SetStateAction, Dispatch, MouseEventHandler, CSSProperties, MouseEvent as ReactMouseEvent } from 'react';
 import { memo, useMemo, useRef, useCallback, useState, useEffect } from 'react';
 import { FaYinYang, FaSave, FaPlus, FaMinus, FaTag, FaSortNumericDown, FaRegCheckCircle, FaRegCircle, FaTimes } from 'react-icons/fa';
 import { AiOutlineSplitCells } from 'react-icons/ai';
@@ -569,6 +569,29 @@ function SegmentList({
   }, [editingSegmentTags, editingSegmentTagsSegmentIndex, onSegmentTagsCloseComplete, updateSegAtIndex]);
 
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const metadataPaneRef = useRef<HTMLDivElement>(null);
+  const [metadataPaneHeight, setMetadataPaneHeight] = useState<number>();
+
+  const startMetadataPaneResize = useCallback((event: ReactMouseEvent<HTMLElement>) => {
+    event.preventDefault();
+    const sidebarHeight = sidebarRef.current?.offsetHeight;
+    const startHeight = metadataPaneRef.current?.offsetHeight;
+    if (sidebarHeight == null || startHeight == null) return;
+    const startY = event.clientY;
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const minMetadataHeight = 120;
+      const minSegmentsHeight = 160;
+      const maxMetadataHeight = Math.max(minMetadataHeight, sidebarHeight - minSegmentsHeight);
+      setMetadataPaneHeight(Math.min(maxMetadataHeight, Math.max(minMetadataHeight, startHeight + moveEvent.clientY - startY)));
+    };
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }, []);
 
   const sensors = useSensors(useSensor(PointerSensor, {
     activationConstraint: {
@@ -684,13 +707,14 @@ function SegmentList({
       </Dialog.Root>
 
       <motion.div
+        ref={sidebarRef}
         style={{ width, background: controlsBackground, borderLeft: '1px solid var(--gray-7)', color: 'var(--gray-11)', transition: darkModeTransition, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
         initial={{ x: width }}
         animate={{ x: 0 }}
         exit={{ x: width }}
         transition={springAnimation}
       >
-        <div style={{ flex: '1 1 50%', minHeight: 0, display: 'flex', flexDirection: 'column', borderBottom: '1px solid var(--gray-7)' }}>
+        <div ref={metadataPaneRef} style={{ flex: metadataPaneHeight == null ? '1 1 50%' : `0 0 ${metadataPaneHeight}px`, minHeight: 0, display: 'flex', flexDirection: 'column', borderBottom: '1px solid var(--gray-7)' }}>
           <div style={{ padding: '.35em .5em .2em', color: 'var(--gray-12)', fontSize: '.8em' }} className="no-user-select">{t('Clip metadata')}</div>
           <div style={{ padding: '0 .5em .5em', overflowY: 'auto', display: 'grid', gap: '.35em' }} className="consistent-scrollbar">
             <div style={{ display: 'grid', gap: '.1em', fontSize: '.72em' }}>
@@ -725,6 +749,8 @@ function SegmentList({
             </div>
           </div>
         </div>
+
+        <button type="button" aria-label={t('Resize metadata panel')} title={t('Drag to resize metadata panel')} style={{ height: 5, flexShrink: 0, cursor: 'row-resize', background: 'var(--gray-6)', border: 0, padding: 0, zIndex: 2 }} onMouseDown={startMetadataPaneResize} />
 
         <div style={{ flex: '1 1 50%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '.2em .5em', color: 'var(--gray-12)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '.2em' }} className="no-user-select">

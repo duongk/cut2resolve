@@ -4,4 +4,4 @@ import type { PlatformPath } from 'node:path';
 // so that it can later be replaced (e.g. by a pure JS implementation or IPC)
 const path: PlatformPath = window.require('node:path');
 
-export const { basename, dirname, extname, isAbsolute, join, normalize, parse, resolve, sep } = path;
+export const { basename, dirname, extname, isAbsolute, join, normalize, parse, relative, resolve, sep } = path;

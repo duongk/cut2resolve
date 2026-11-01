@@ -34,6 +34,7 @@ import mainApi from './mainApi';
 
 
 const zoomOptions = Array.from({ length: 13 }, (_unused, z) => 2 ** z);
+const playbackRateOptions = [1, 1.2, 1.5, 2];
 
 const leftRightWidth = 100;
 
@@ -291,7 +292,7 @@ function BottomBar({
   darkMode,
   toggleShowThumbnails, toggleWaveformMode, waveformMode, showThumbnails,
   outputPlaybackRate, setOutputPlaybackRate,
-  formatTimecode, parseTimecode, playbackRate,
+  formatTimecode, parseTimecode, playbackRate, setPlaybackRate,
   currentFrame, playbackMode, displayTime, fileDurationNonZero, getFrameCount,
 }: {
   zoom: number,
@@ -340,6 +341,7 @@ function BottomBar({
   formatTimecode: FormatTimecode,
   parseTimecode: ParseTimecode,
   playbackRate: number,
+  setPlaybackRate: (rate: number) => void,
   currentFrame: Frame | undefined,
   playbackMode: PlaybackMode | undefined,
   displayTime: number,
@@ -580,6 +582,14 @@ function BottomBar({
           )}
         </div>
 
+        {isFileOpened && (
+          <div ref={playbackRateRef} style={{ borderRadius: '.5em', marginLeft: '.35em' }}>
+            <Select value={playbackRate.toString()} title={t('Playback speed')} style={{ width: '4.2em' }} onChange={withBlur((event) => setPlaybackRate(Number(event.target.value)))}>
+              {playbackRateOptions.map((rate) => <option key={rate} value={rate}>{rate}×</option>)}
+            </Select>
+          </div>
+        )}
+
         {isFileOpened && !simpleMode && (
           <>
             <div role="button" title={t('Zoom')} onClick={timelineToggleComfortZoom}>{Math.floor(zoom)}x</div>
@@ -590,8 +600,6 @@ function BottomBar({
                 <option key={val} value={String(val)}>{t('Zoom')} {val}x</option>
               ))}
             </Select>
-
-            <div ref={playbackRateRef} title={t('Playback rate')} style={{ color: 'var(--gray-11)', fontSize: '.7em', borderRadius: '.5em' }}>{playbackRate.toFixed(1)}</div>
 
             <div style={{ whiteSpace: 'nowrap' }}>
               <IoMdSpeedometer title={t('Change FPS')} style={{ fontSize: '1.3em', verticalAlign: 'middle' }} role="button" onClick={handleChangePlaybackRateClick} />

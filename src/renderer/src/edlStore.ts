@@ -1,22 +1,25 @@
 import JSON5 from 'json5';
+import type * as os from 'node:os';
 import i18n from 'i18next';
 import invariant from 'tiny-invariant';
 import { ZodError } from 'zod';
 
 import { parseSrtToSegments, formatSrt, parseCuesheet, parseXmeml, parseFcpXml, parseCsv, parseCutlist, parsePbf, parseEdl, formatCsvHuman, formatTsvHuman, formatCsvFrames, formatCsvSeconds, formatResolveMarkerImporterScript, formatResolveMarkerManifest, parseCsvTime, getFrameValParser, parseDvAnalyzerSummaryTxt, parseOtio } from './edlFormats';
 import { askForYouTubeInput, showOpenDialog } from './dialogs';
-import { getOutPath } from './util';
+import { getOutPath, isMac, isWindows, showItemInFolder } from './util';
 import type { ClipMetadata, EdlExportType, EdlFileType, EdlImportType, GetFrameCount, LlcProject, SegmentBase, StateSegment } from './types';
 import { llcProjectV1Schema, llcProjectV2Schema } from './types';
 import { mapSaveableSegments } from './segments';
 import isDev from './isDev';
-import { basename } from './util/path';
+import { basename, join } from './util/path';
 import { resolveMarkerImporterScriptFileName } from '../../main/common.js';
 
-const { readFile, writeFile } = window.require('node:fs/promises');
+const { mkdir, readFile, writeFile } = window.require('node:fs/promises');
 const cueParser = window.require('cue-parser');
 
 const { dialog } = window.require('@electron/remote');
+const { app } = window.require('@electron/remote');
+const { homedir } = window.require('node:os') as typeof os;
 
 
 // When readFile is used with 'utf8', ef bb bf is its UTF-8 representation of BOM. As BOM is considered white-space, it can be stripped by .trim(). Node.js does not strip BOM, it is a userland task.
@@ -57,6 +60,20 @@ async function loadCue(path: string) {
 
 async function loadSrt(path: string) {
   return parseSrtToSegments(await readFile(path, 'utf8'));
+}
+
+/** Installs the one reusable importer into Resolve's per-user Utility scripts folder. */
+export async function installResolveMarkerImporterScript() {
+  let scriptDir: string;
+  if (isMac) scriptDir = join(homedir(), 'Library', 'Application Support', 'Blackmagic Design', 'DaVinci Resolve', 'Fusion', 'Scripts', 'Utility');
+  else if (isWindows) scriptDir = join(app.getPath('appData'), 'Blackmagic Design', 'DaVinci Resolve', 'Fusion', 'Scripts', 'Utility');
+  else throw new Error('Automatic DaVinci Resolve script installation is supported on macOS and Windows only.');
+
+  await mkdir(scriptDir, { recursive: true });
+  const scriptPath = join(scriptDir, resolveMarkerImporterScriptFileName);
+  await writeFile(scriptPath, formatResolveMarkerImporterScript());
+  await showItemInFolder(scriptPath);
+  return scriptPath;
 }
 
 export async function saveCsv(path: string, cutSegments: SegmentBase[]) {

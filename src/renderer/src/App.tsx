@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactEventHandler, FocusEventHandler, DragEventHandler } from 'react';
+import type { CSSProperties, ReactEventHandler, FocusEventHandler, DragEventHandler, MouseEvent as ReactMouseEvent } from 'react';
 import type * as os from 'node:os';
 import { memo, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { FaRegTimesCircle } from 'react-icons/fa';
@@ -45,6 +45,7 @@ import VolumeControl from './components/VolumeControl';
 import PlaybackStreamSelector from './components/PlaybackStreamSelector';
 import BatchFilesList from './components/BatchFilesList';
 import FolderTree from './components/FolderTree';
+import type { FolderFileAction } from './components/FolderTree';
 import ConcatDialog from './components/ConcatDialog';
 import KeyboardShortcuts from './components/KeyboardShortcuts';
 import Working from './components/Working';
@@ -68,7 +69,7 @@ import {
 } from './ffmpeg';
 import { shouldCopyStreamByDefault, getAudioStreams, getRealVideoStreams, isAudioDefinitelyNotSupported, willPlayerProperlyHandleVideo, doesPlayerSupportHevcPlayback, getSubtitleStreams, enableVideoTrack, enableAudioTrack, canHtml5PlayerPlayStreams, isMatroska } from './util/streams';
 import { needsHvc1Tag } from './util/metadata';
-import { exportEdlFile, readEdlFile, loadLlcProject, askForEdlImport, loadResolveMarkerManifestMetadata } from './edlStore';
+import { exportEdlFile, readEdlFile, loadLlcProject, askForEdlImport, installResolveMarkerImporterScript, loadResolveMarkerManifestMetadata } from './edlStore';
 import { formatYouTube, getFrameCountRaw, formatTsvHuman } from './edlFormats';
 import {
   getOutPath, getOutDir,
@@ -88,6 +89,7 @@ import {
   getSuffixedOutPath,
   calculateTimelinePercent,
   getFileDir,
+  trashFile,
 } from './util';
 import getSwal, { errorToast, showPlaybackFailedMessage } from './swal';
 import { adjustRate } from './util/rate-calculator';
@@ -127,13 +129,21 @@ import WhatsNew from './components/WhatsNew';
 import mainApi from './mainApi.js';
 import type { AppEvent } from '../../main/index.js';
 import { appName } from '../../main/common.js';
-import { parse as parsePath, join as pathJoin, basename, dirname } from './util/path';
+import { parse as parsePath, join as pathJoin, basename, dirname, relative } from './util/path';
+import { findRelatedCameraFiles, moveRelatedCameraFiles } from './fileBrowserOperations';
 
 const { ipcRenderer, webUtils } = window.require('electron');
 const { lstat } = window.require('node:fs/promises');
 const { homedir } = window.require('@electron/remote').require('node:os') as typeof os;
+
+const minPaneWidth = 180;
+const maxPaneWidth = 600;
+const paneResizeHandleStyle: CSSProperties = { width: 5, flexShrink: 0, cursor: 'col-resize', background: 'var(--gray-6)', border: 0, padding: 0, transition: darkModeTransition, zIndex: 2 };
 const { hasDisabledNetworking, pathToFileURL, lossyMode, isLinux } = window.require('@electron/remote').require('./index.js');
 
+const isFolderOpenFileAction = (action: FolderFileAction): action is Extract<FolderFileAction, OpenFileResponse> => (
+  ['open', 'tracks', 'addToBatch', 'mergeWithCurrentFile'].includes(action)
+);
 
 const hevcPlaybackSupportedPromise = doesPlayerSupportHevcPlayback();
 // eslint-disable-next-line unicorn/prefer-top-level-await
@@ -189,6 +199,8 @@ function App() {
   const [encBitrate, setEncBitrate] = useState<number | undefined>();
   const [exportCount, setExportCount] = useState(0);
   const [maxKeyframes, setMaxKeyframes] = useState(10000);
+  const [leftPaneWidth, setLeftPaneWidth] = useState(leftBarWidth);
+  const [rightPaneWidth, setRightPaneWidth] = useState(rightBarWidth);
 
   const incrementMediaSourceQuality = useCallback(() => setMediaSourceQuality((v) => (v + 1) % mediaSourceQualities.length), []);
 
@@ -196,6 +208,25 @@ function App() {
   const [batchFiles, setBatchFiles] = useState<BatchFile[]>([]);
   const [selectedBatchFiles, setSelectedBatchFiles] = useState<string[]>([]);
   const [folderPath, setFolderPath] = useState<string | undefined>(() => homedir());
+  const [folderBrowserRefreshKey, setFolderBrowserRefreshKey] = useState(0);
+
+  const startPaneResize = useCallback((side: 'left' | 'right') => (event: ReactMouseEvent<HTMLElement>) => {
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = side === 'left' ? leftPaneWidth : rightPaneWidth;
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const delta = side === 'left' ? moveEvent.clientX - startX : startX - moveEvent.clientX;
+      const nextWidth = Math.min(maxPaneWidth, Math.max(minPaneWidth, startWidth + delta));
+      if (side === 'left') setLeftPaneWidth(nextWidth);
+      else setRightPaneWidth(nextWidth);
+    };
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }, [leftPaneWidth, rightPaneWidth]);
 
   const allUserSettings = useUserSettingsRoot();
   const { captureFormat, keyframeCut, preserveMetadata, preserveMetadataOnMerge, preserveMovData, preserveChapters, movFastStart, avoidNegativeTs, autoMerge, timecodeFormat, invertCutSegments, autoExportExtraStreams, askBeforeClose, enableImportChapters, enableAskForFileOpenAction, playbackVolume, autoSaveProjectFile, wheelSensitivity, waveformHeight, invertTimelineScroll, language, ffmpegExperimental, hideNotifications, hideOsNotifications, autoLoadTimecode, autoDeleteMergedSegments, exportConfirmEnabled, segmentsToChapters, simpleMode, cutFileTemplate, cutMergedFileTemplate, mergedFileTemplate, keyboardSeekAccFactor, keyboardNormalSeekSpeed, keyboardSeekSpeed2, keyboardSeekSpeed3, treatInputFileModifiedTimeAsStart, treatOutputFileModifiedTimeAsStart, outFormatLocked, safeOutputFileName, enableAutoHtml5ify, segmentsToChaptersOnly, keyBindings, enableSmartCut, customFfPath, storeProjectInWorkingDir, enableOverwriteOutput, mouseWheelZoomModifierKey, mouseWheelFrameSeekModifierKey, mouseWheelKeyframeSeekModifierKey, captureFrameMethod, captureFrameQuality, captureFrameFileNameFormat, enableNativeHevc, cleanupChoices, preferStrongColors, outputFileNameMinZeroPadding, cutFromAdjustmentFrames, cutToAdjustmentFrames, waveformMode: waveformModePreference, thumbnailsEnabled, keyframesEnabled, reducedMotion, ffmpegHwaccel, videoFit } = allUserSettings.settings;
@@ -1986,6 +2017,62 @@ function App() {
     if (selectedFolder != null) setFolderPath(selectedFolder);
   }, [folderPath, t]);
 
+  const handleFolderFileAction = useCallback(async (path: string, action: FolderFileAction) => {
+    if (isFolderOpenFileAction(action)) {
+      userOpenFiles([path], action);
+      return;
+    }
+
+    await withErrorHandling(async () => {
+      const relatedPaths = await findRelatedCameraFiles(path);
+      if (relatedPaths.length === 0) {
+        getSwal().toast.fire({ icon: 'info', title: t('No related camera files found') });
+        return;
+      }
+
+      if (action === 'moveRelatedFiles') {
+        const { canceled, filePaths } = await showOpenDialog({ properties: ['openDirectory', 'createDirectory'], defaultPath: dirname(path), title: t('Select destination folder') });
+        const [destinationFolder] = filePaths;
+        if (canceled || destinationFolder == null) return;
+
+        const { isConfirmed } = await getSwal().Swal.fire({
+          icon: 'warning',
+          title: t('Move {{count}} related camera files?', { count: relatedPaths.length }),
+          text: `${t('The Proxy folder structure will be preserved. Existing destination files will receive a -1, -2, etc. suffix.')}\n\n${relatedPaths.map((relatedPath) => relative(dirname(path), relatedPath)).join('\n')}`,
+          confirmButtonText: t('Move files'),
+          showCancelButton: true,
+        });
+        if (!isConfirmed) return;
+
+        setWorking({ text: t('Moving related camera files') });
+        try {
+          await moveRelatedCameraFiles({ paths: relatedPaths, sourceFolder: dirname(path), destinationFolder, mediaFileName: basename(path) });
+          setFolderBrowserRefreshKey((value) => value + 1);
+        } finally {
+          setWorking(undefined);
+        }
+        return;
+      }
+
+      const { isConfirmed } = await getSwal().Swal.fire({
+        icon: 'warning',
+        title: t('Move {{count}} related camera files to Trash?', { count: relatedPaths.length }),
+        text: `${t('They will be moved to your system Trash and can be restored there.')}\n\n${relatedPaths.map((relatedPath) => relative(dirname(path), relatedPath)).join('\n')}`,
+        confirmButtonText: t('Move to Trash'),
+        showCancelButton: true,
+      });
+      if (!isConfirmed) return;
+
+      setWorking({ text: t('Moving related camera files to Trash') });
+      try {
+        await Promise.all(relatedPaths.map((relatedPath) => trashFile(relatedPath)));
+        setFolderBrowserRefreshKey((value) => value + 1);
+      } finally {
+        setWorking(undefined);
+      }
+    }, action === 'moveRelatedFiles' ? t('Failed to move related camera files') : t('Failed to move related camera files to Trash'));
+  }, [t, userOpenFiles, withErrorHandling, setWorking]);
+
   const concatBatch = useCallback(() => {
     if (batchFiles.length < 2) {
       openFilesDialog();
@@ -2366,6 +2453,13 @@ function App() {
     }, i18n.t('Failed to export project'));
   }, [checkFileOpened, clipMetadata, customOutDir, filePath, getFrameCount, selectedSegments, withErrorHandling]);
 
+  const installResolveMarkerImporter = useCallback(async () => {
+    await withErrorHandling(async () => {
+      const scriptPath = await installResolveMarkerImporterScript();
+      getSwal().toast.fire({ icon: 'success', title: t('DaVinci Resolve importer installed'), text: scriptPath });
+    }, t('Failed to install DaVinci Resolve importer'));
+  }, [t, withErrorHandling]);
+
   const importEdlFile = useCallback(async (type: EdlImportType) => {
     if (!checkFileOpened()) return;
 
@@ -2404,6 +2498,7 @@ function App() {
         // todo separate actions per type and move them into mainActions? https://github.com/mifi/lossless-cut/issues/254#issuecomment-932649424
         importEdlFile,
         exportEdlFile: tryExportEdlFile,
+        installResolveMarkerImporter,
         promptDownloadMediaUrl: promptDownloadMediaUrlWrapper,
       }).map(([key, fn]) => [
         key,
@@ -2454,7 +2549,7 @@ function App() {
       ipcActions.forEach(([key, action]) => ipcRenderer.off(key, action));
       ipcRenderer.off('apiAction', tryApiAction);
     };
-  }, [checkFileOpened, customOutDir, detectedFps, filePath, getFrameCount, getKeyboardAction, goToTimecodeDirect, handleError, importEdlFile, loadCutSegments, mainActions, promptDownloadMediaUrlWrapper, selectedSegments, toggleKeyboardShortcuts, tryExportEdlFile, userOpenFiles]);
+  }, [checkFileOpened, customOutDir, detectedFps, filePath, getFrameCount, getKeyboardAction, goToTimecodeDirect, handleError, importEdlFile, installResolveMarkerImporter, loadCutSegments, mainActions, promptDownloadMediaUrlWrapper, selectedSegments, toggleKeyboardShortcuts, tryExportEdlFile, userOpenFiles]);
 
   const handleBatchFilesDrop = useCallback<DragEventHandler<HTMLDivElement>>(async (ev) => {
     ev.preventDefault();
@@ -2577,19 +2672,21 @@ function App() {
                   <AnimatePresence>
                     {folderPath != null ? (
                       <FolderTree
+                        key={folderBrowserRefreshKey}
                         folderPath={folderPath}
                         selectedPath={filePath}
-                        width={leftBarWidth}
+                        width={leftPaneWidth}
                         hasOpenFile={isFileOpened}
-                        onFileAction={(path, action) => { userOpenFiles([path], action); }}
+                        onFileAction={handleFolderFileAction}
                         onChangeFolder={openFolderBrowserDialog}
+                        onOpenLocation={setFolderPath}
                         onClose={() => setFolderPath(undefined)}
                       />
                     ) : showLeftBar && (
                       <BatchFilesList
                         selectedBatchFiles={selectedBatchFiles}
                         filePath={filePath}
-                        width={leftBarWidth}
+                        width={leftPaneWidth}
                         batchFiles={batchFiles}
                         setBatchFiles={setBatchFiles}
                         onBatchFileSelect={onBatchFileSelect}
@@ -2601,6 +2698,8 @@ function App() {
                       />
                     )}
                   </AnimatePresence>
+
+                  {(folderPath != null || showLeftBar) && <button type="button" aria-label={t('Resize left pane')} title={t('Drag to resize left pane')} style={paneResizeHandleStyle} onMouseDown={startPaneResize('left')} />}
 
                   {/* Middle part (also shown in fullscreen): */}
                   <div style={{ position: 'relative', flexGrow: 1, overflow: 'hidden' }} ref={videoContainerRef}>
@@ -2677,10 +2776,12 @@ function App() {
                     )}
                   </div>
 
+                  {showRightBar && isFileOpened && filePath != null && <button type="button" aria-label={t('Resize right pane')} title={t('Drag to resize right pane')} style={paneResizeHandleStyle} onMouseDown={startPaneResize('right')} />}
+
                   <AnimatePresence>
                     {showRightBar && isFileOpened && filePath != null && (
                       <SegmentList
-                        width={rightBarWidth}
+                        width={rightPaneWidth}
                         currentSegIndex={currentSegIndexSafe}
                         cutSegments={cutSegments}
                         inverseCutSegments={inverseCutSegments}
@@ -2812,6 +2913,7 @@ function App() {
                     formatTimecode={formatTimecode}
                     parseTimecode={parseTimecode}
                     playbackRate={playbackRate}
+                    setPlaybackRate={setPlaybackRate}
                     currentFrame={currentFrame}
                     playbackMode={playbackMode}
                     displayTime={displayTime}

@@ -191,6 +191,12 @@ export default ({ app, mainWindow, newVersion, isStoreBuild, openExternal }: {
               },
             },
             {
+              label: esc(t('Install DaVinci Resolve importer')),
+              click() {
+                mainWindow.webContents.send('installResolveMarkerImporter');
+              },
+            },
+            {
               label: esc(t('Start times as YouTube Chapters')),
               click() {
                 mainWindow.webContents.send('exportYouTube');
