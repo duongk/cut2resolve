@@ -34,8 +34,10 @@ jobs:
       - run: yarn build
 
       # Request DMG explicitly so the Mac App Store target is never built.
+      # Ad-hoc signing happens after Electron's fuse changes, preventing macOS
+      # from killing Electron for an invalid stale embedded signature.
       - name: Package unsigned macOS DMGs
-        run: yarn electron-builder --mac dmg --x64 --arm64 --publish never
+        run: yarn electron-builder --mac dmg --x64 --arm64 --publish never -c.mac.identity=- -c.mac.hardenedRuntime=false -c.mac.notarize=false
 
       - uses: actions/upload-artifact@v4
         with:
