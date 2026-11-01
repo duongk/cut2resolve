@@ -106,6 +106,7 @@ function MediaFile({ path, name, depth, selectedPath, hasOpenFile, onFileAction 
     <button
       type="button"
       ref={ref}
+      data-folder-media-path={path}
       title={path}
       style={{ ...rowStyle, paddingLeft: `${depth * 14 + 6}px`, background: selectedPath === path ? 'var(--gray-7)' : 'transparent' }}
       onClick={() => onFileAction(path, 'open')}
@@ -172,14 +173,15 @@ function Directory({ path, depth, selectedPath, hasOpenFile, onFileAction, onMov
   const toggle = useCallback(() => setExpanded((value) => !value), []);
   const refresh = useCallback(() => setRefreshKey((value) => value + 1), []);
   const indentation = { paddingLeft: `${depth * 14 + 6}px` };
-  const handleDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
+  const handleDragOver = useCallback((event: DragEvent<HTMLButtonElement>) => {
     const { dataTransfer } = event;
     if (!dataTransfer.types.includes('application/x-cut2resolve-media-path')) return;
     event.preventDefault();
+    event.stopPropagation();
     dataTransfer.dropEffect = 'move';
     setIsDropTarget(true);
   }, []);
-  const handleDrop = useCallback((event: DragEvent<HTMLDivElement>) => {
+  const handleDrop = useCallback((event: DragEvent<HTMLButtonElement>) => {
     const sourcePath = event.dataTransfer.getData('application/x-cut2resolve-media-path');
     if (sourcePath === '') return;
     event.preventDefault();
@@ -189,9 +191,20 @@ function Directory({ path, depth, selectedPath, hasOpenFile, onFileAction, onMov
   }, [onMoveRelatedFiles, path]);
 
   return (
-    <div onDragOver={handleDragOver} onDragLeave={() => setIsDropTarget(false)} onDrop={handleDrop} style={isDropTarget ? { background: 'var(--gray-6)' } : undefined}>
+    <div>
       <div style={{ display: 'flex', alignItems: 'center' }}>
-        <button type="button" ref={folderButtonRef} title={expanded ? t('Collapse folder') : t('Expand folder')} style={{ ...rowStyle, ...indentation, flex: 1 }} onClick={toggle}>
+        <button
+          type="button"
+          ref={folderButtonRef}
+          title={expanded ? t('Collapse folder') : t('Expand folder')}
+          style={{ ...rowStyle, ...indentation, flex: 1, background: isDropTarget ? 'var(--cyan-6)' : 'transparent', boxShadow: isDropTarget ? `inset 0 0 0 2px ${primaryColor}` : undefined, borderRadius: isDropTarget ? '.25em' : undefined }}
+          onClick={toggle}
+          onDragOver={handleDragOver}
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsDropTarget(false);
+          }}
+          onDrop={handleDrop}
+        >
           {expanded ? <FaChevronDown size=".7em" /> : <FaChevronRight size=".7em" />}
           {expanded ? <FaFolderOpen color={primaryColor} /> : <FaFolder color={primaryColor} />}
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{basename(path)}</span>

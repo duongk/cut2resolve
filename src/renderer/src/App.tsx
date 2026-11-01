@@ -201,6 +201,7 @@ function App() {
   const [maxKeyframes, setMaxKeyframes] = useState(10000);
   const [leftPaneWidth, setLeftPaneWidth] = useState(leftBarWidth);
   const [rightPaneWidth, setRightPaneWidth] = useState(rightBarWidth);
+  const [viewerStatusMessage, setViewerStatusMessage] = useState<string>();
 
   const incrementMediaSourceQuality = useCallback(() => setMediaSourceQuality((v) => (v + 1) % mediaSourceQualities.length), []);
 
@@ -747,6 +748,7 @@ function App() {
     setExportConfirmOpen(false);
     setOutputPlaybackRateState(1);
     setCurrentFileExportCount(0);
+    setViewerStatusMessage(undefined);
   }, [videoRef, setCommandedTime, setPlaybackRate, setPreviewFilePath, setUsingDummyVideo, setPlaying, playingRef, setPlaybackMode, cutSegmentsHistory, setDetectedFileFormat, setCopyStreamIdsByFile, setThumbnails, setSubtitlesByStreamId, setOutputPlaybackRateState]);
 
 
@@ -1588,7 +1590,7 @@ function App() {
         setFileFormat(outFormatLocked);
       } else {
         const recommendedDefaultFormat = mapRecommendedDefaultFormat({ sourceFormat: fileFormatNew, streams: ffprobeMeta.streams });
-        if (recommendedDefaultFormat.message) showNotification({ icon: 'info', text: recommendedDefaultFormat.message });
+        setViewerStatusMessage(recommendedDefaultFormat.message);
         setFileFormat(recommendedDefaultFormat.format);
       }
 
@@ -2107,6 +2109,27 @@ function App() {
       }
     }, action === 'moveRelatedFiles' ? t('Failed to move related camera files') : t('Failed to move related camera files to Trash'));
   }, [t, userOpenFiles, withErrorHandling, setWorking, videoContainerRef]);
+
+  const handleFolderFileNavigation = useCallback((event: KeyboardEvent) => {
+    if (folderPath == null || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const paths = [...document.querySelectorAll<HTMLButtonElement>('[data-folder-media-path]')].map((element) => element.dataset['folderMediaPath']).filter((path): path is string => path != null);
+    if (paths.length === 0) return;
+    const currentIndex = filePath == null ? -1 : paths.indexOf(filePath);
+    const nextIndex = event.key === 'ArrowDown'
+      ? Math.min(paths.length - 1, currentIndex + 1)
+      : Math.max(0, currentIndex < 0 ? paths.length - 1 : currentIndex - 1);
+    const nextPath = paths[nextIndex];
+    if (nextPath == null || nextPath === filePath) return;
+    event.preventDefault();
+    handleFolderFileAction(nextPath, 'open').catch(console.error);
+  }, [filePath, folderPath, handleFolderFileAction]);
+
+  useEffect(() => {
+    const viewer = videoContainerRef.current;
+    if (viewer == null) return undefined;
+    viewer.addEventListener('keydown', handleFolderFileNavigation);
+    return () => viewer.removeEventListener('keydown', handleFolderFileNavigation);
+  }, [handleFolderFileNavigation, videoContainerRef]);
 
   const concatBatch = useCallback(() => {
     if (batchFiles.length < 2) {
@@ -2767,6 +2790,12 @@ function App() {
                     </div>
 
                     {bigWaveformEnabled && <BigWaveform waveforms={waveforms} relevantTime={relevantTime} playing={playing} fileDurationNonZero={fileDurationNonZero} zoom={zoomUnrounded} seekRel={seekRel} darkMode={darkMode} />}
+
+                    {viewerStatusMessage && (
+                      <div role="status" style={{ position: 'absolute', left: '1em', bottom: '1em', maxWidth: 'calc(100% - 2em)', padding: '.45em .65em', border: '1px solid var(--orange-9)', borderRadius: '.35em', background: 'var(--gray-2)', color: 'var(--gray-12)', boxShadow: '0 .1em .4em rgb(0 0 0 / 35%)', zIndex: 1, pointerEvents: 'none' }}>
+                        {viewerStatusMessage}
+                      </div>
+                    )}
 
                     {compatPlayerEnabled && (
                       <div style={{ position: 'absolute', top: 0, right: 0, left: 0, marginTop: '1em', marginLeft: '1em', color: 'var(--gray-12)', opacity: 0.7, display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
