@@ -202,6 +202,7 @@ function App() {
   const [leftPaneWidth, setLeftPaneWidth] = useState(leftBarWidth);
   const [rightPaneWidth, setRightPaneWidth] = useState(rightBarWidth);
   const [viewerStatusMessage, setViewerStatusMessage] = useState<string>();
+  const [showOutputFormatWarnings, setShowOutputFormatWarnings] = useState(true);
 
   const incrementMediaSourceQuality = useCallback(() => setMediaSourceQuality((v) => (v + 1) % mediaSourceQualities.length), []);
 
@@ -1590,7 +1591,7 @@ function App() {
         setFileFormat(outFormatLocked);
       } else {
         const recommendedDefaultFormat = mapRecommendedDefaultFormat({ sourceFormat: fileFormatNew, streams: ffprobeMeta.streams });
-        setViewerStatusMessage(recommendedDefaultFormat.message);
+        if (showOutputFormatWarnings) setViewerStatusMessage(recommendedDefaultFormat.message);
         setFileFormat(recommendedDefaultFormat.format);
       }
 
@@ -1614,7 +1615,7 @@ function App() {
       resetState();
       throw err;
     }
-  }, [storeProjectInWorkingDir, setWorking, loadEdlFile, getEdlFilePath, enableImportChapters, ensureAccessToSourceDir, loadCutSegments, autoLoadTimecode, enableNativeHevc, ensureWritableOutDir, customOutDir, resetState, clearSegColorCounter, setCopyStreamIdsForPath, setDetectedFileFormat, outFormatLocked, setUsingDummyVideo, setPreviewFilePath, html5ifyAndLoadWithPreferences, setFileFormat, showNotification, showPreviewFileLoadedMessage, showNotNativelySupportedMessage]);
+  }, [storeProjectInWorkingDir, setWorking, loadEdlFile, getEdlFilePath, enableImportChapters, ensureAccessToSourceDir, loadCutSegments, autoLoadTimecode, enableNativeHevc, ensureWritableOutDir, customOutDir, resetState, clearSegColorCounter, setCopyStreamIdsForPath, setDetectedFileFormat, outFormatLocked, setUsingDummyVideo, setPreviewFilePath, html5ifyAndLoadWithPreferences, setFileFormat, showNotification, showPreviewFileLoadedMessage, showNotNativelySupportedMessage, showOutputFormatWarnings]);
 
   const toggleLastCommands = useCallback(() => setLastCommandsVisible((val) => !val), []);
   const toggleSettings = useCallback(() => setSettingsVisible((val) => !val), []);
@@ -2037,7 +2038,7 @@ function App() {
       const { isConfirmed } = await getSwal().Swal.fire({
         icon: 'warning',
         title: t('Move {{count}} related camera files?', { count: relatedPaths.length }),
-        text: `${t('The Proxy folder structure will be preserved. Existing destination files will receive a -1, -2, etc. suffix.')}\n\n${relatedPaths.map((relatedPath) => relative(sourceFolder, relatedPath)).join('\n')}`,
+        text: `${t('Proxy files will be placed in a Proxy subfolder. Existing destination files will receive a -1, -2, etc. suffix.')}\n\n${relatedPaths.map((relatedPath) => relative(sourceFolder, relatedPath)).join('\n')}`,
         confirmButtonText: t('Move files'),
         showCancelButton: true,
       });
@@ -2056,7 +2057,7 @@ function App() {
   const handleFolderFileAction = useCallback(async (path: string, action: FolderFileAction) => {
     if (isFolderOpenFileAction(action)) {
       await userOpenFiles([path], action);
-      if (action === 'open') window.requestAnimationFrame(() => videoContainerRef.current?.focus());
+      if (action === 'open') window.requestAnimationFrame(() => document.body.focus());
       return;
     }
 
@@ -2075,7 +2076,7 @@ function App() {
         const { isConfirmed } = await getSwal().Swal.fire({
           icon: 'warning',
           title: t('Move {{count}} related camera files?', { count: relatedPaths.length }),
-          text: `${t('The Proxy folder structure will be preserved. Existing destination files will receive a -1, -2, etc. suffix.')}\n\n${relatedPaths.map((relatedPath) => relative(dirname(path), relatedPath)).join('\n')}`,
+          text: `${t('Proxy files will be placed in a Proxy subfolder. Existing destination files will receive a -1, -2, etc. suffix.')}\n\n${relatedPaths.map((relatedPath) => relative(dirname(path), relatedPath)).join('\n')}`,
           confirmButtonText: t('Move files'),
           showCancelButton: true,
         });
@@ -2108,10 +2109,10 @@ function App() {
         setWorking(undefined);
       }
     }, action === 'moveRelatedFiles' ? t('Failed to move related camera files') : t('Failed to move related camera files to Trash'));
-  }, [t, userOpenFiles, withErrorHandling, setWorking, videoContainerRef]);
+  }, [t, userOpenFiles, withErrorHandling, setWorking]);
 
   const handleFolderFileNavigation = useCallback((event: KeyboardEvent) => {
-    if (folderPath == null || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (event.target !== document.body || folderPath == null || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     const paths = [...document.querySelectorAll<HTMLButtonElement>('[data-folder-media-path]')].map((element) => element.dataset['folderMediaPath']).filter((path): path is string => path != null);
     if (paths.length === 0) return;
     const currentIndex = filePath == null ? -1 : paths.indexOf(filePath);
@@ -2125,11 +2126,15 @@ function App() {
   }, [filePath, folderPath, handleFolderFileAction]);
 
   useEffect(() => {
-    const viewer = videoContainerRef.current;
-    if (viewer == null) return undefined;
-    viewer.addEventListener('keydown', handleFolderFileNavigation);
-    return () => viewer.removeEventListener('keydown', handleFolderFileNavigation);
-  }, [handleFolderFileNavigation, videoContainerRef]);
+    document.addEventListener('keydown', handleFolderFileNavigation);
+    return () => document.removeEventListener('keydown', handleFolderFileNavigation);
+  }, [handleFolderFileNavigation]);
+
+  useEffect(() => {
+    if (viewerStatusMessage == null) return undefined;
+    const timeout = window.setTimeout(() => setViewerStatusMessage(undefined), 8000);
+    return () => window.clearTimeout(timeout);
+  }, [viewerStatusMessage]);
 
   const concatBatch = useCallback(() => {
     if (batchFiles.length < 2) {
@@ -2761,7 +2766,7 @@ function App() {
                   {(folderPath != null || showLeftBar) && <button type="button" aria-label={t('Resize left pane')} title={t('Drag to resize left pane')} style={paneResizeHandleStyle} onMouseDown={startPaneResize('left')} />}
 
                   {/* Middle part (also shown in fullscreen): */}
-                  <div style={{ position: 'relative', flexGrow: 1, overflow: 'hidden' }} ref={videoContainerRef} tabIndex={-1}>
+                  <div style={{ position: 'relative', flexGrow: 1, overflow: 'hidden' }} ref={videoContainerRef}>
                     {!isFileOpened && <NoFileLoaded mifiLink={mifiLink} currentCutSeg={currentCutSeg} onClick={openFilesDialog} darkMode={darkMode} keyBindingByAction={keyBindingByAction} />}
 
                     <div className="no-user-select" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, visibility: !isFileOpened || !hasVideo || bigWaveformEnabled ? 'hidden' : undefined }} onWheel={onTimelineWheel}>
@@ -2792,8 +2797,11 @@ function App() {
                     {bigWaveformEnabled && <BigWaveform waveforms={waveforms} relevantTime={relevantTime} playing={playing} fileDurationNonZero={fileDurationNonZero} zoom={zoomUnrounded} seekRel={seekRel} darkMode={darkMode} />}
 
                     {viewerStatusMessage && (
-                      <div role="status" style={{ position: 'absolute', left: '1em', bottom: '1em', maxWidth: 'calc(100% - 2em)', padding: '.45em .65em', border: '1px solid var(--orange-9)', borderRadius: '.35em', background: 'var(--gray-2)', color: 'var(--gray-12)', boxShadow: '0 .1em .4em rgb(0 0 0 / 35%)', zIndex: 1, pointerEvents: 'none' }}>
-                        {viewerStatusMessage}
+                      <div role="status" style={{ position: 'absolute', left: '1em', bottom: '1em', maxWidth: 'calc(100% - 2em)', padding: '.45em .65em', border: '1px solid var(--orange-9)', borderRadius: '.35em', background: 'var(--gray-2)', color: 'var(--gray-12)', boxShadow: '0 .1em .4em rgb(0 0 0 / 35%)', zIndex: 1, display: 'flex', alignItems: 'center', gap: '.65em' }}>
+                        <span>{viewerStatusMessage}</span>
+                        <button type="button" onClick={() => { setShowOutputFormatWarnings(false); setViewerStatusMessage(undefined); }} style={{ flexShrink: 0, color: 'inherit', background: 'transparent', border: '1px solid var(--gray-8)', borderRadius: '.25em', padding: '.2em .4em', cursor: 'pointer' }}>
+                          {t('Don\'t show again this session')}
+                        </button>
                       </div>
                     )}
 

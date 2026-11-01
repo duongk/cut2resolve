@@ -40,8 +40,16 @@ function getDestinationFileName({ sourceName, mediaFileName, destinationMediaFil
   return sourceName;
 }
 
-async function getAvailableDestinationMediaFileName({ pathsByDirectory, sourceFolder, destinationFolder, mediaFileName }: {
-  pathsByDirectory: Map<string, string[]>,
+function isInsideProxyDirectory(sourcePath: string, sourceFolder: string) {
+  return relative(sourceFolder, dirname(sourcePath)).split(/[\\/]/).some((part) => part.toLowerCase() === 'proxy');
+}
+
+function getDestinationDirectory({ sourcePath, sourceFolder, destinationFolder }: { sourcePath: string, sourceFolder: string, destinationFolder: string }) {
+  return isInsideProxyDirectory(sourcePath, sourceFolder) ? join(destinationFolder, 'Proxy') : destinationFolder;
+}
+
+async function getAvailableDestinationMediaFileName({ paths, sourceFolder, destinationFolder, mediaFileName }: {
+  paths: string[],
   sourceFolder: string,
   destinationFolder: string,
   mediaFileName: string,
@@ -49,10 +57,10 @@ async function getAvailableDestinationMediaFileName({ pathsByDirectory, sourceFo
   const { name, ext } = parse(mediaFileName);
   for (let suffix = 1; ; suffix += 1) {
     const candidate = suffix === 1 ? mediaFileName : `${name}-${suffix - 1}${ext}`;
-    const destinationPaths = pathsByDirectory.entries().flatMap(([sourceDir, sourcePaths]) => {
-      const destinationDir = join(destinationFolder, relative(sourceFolder, sourceDir));
-      return sourcePaths.map((sourcePath) => join(destinationDir, getDestinationFileName({ sourceName: basename(sourcePath), mediaFileName, destinationMediaFileName: candidate })));
-    });
+    const destinationPaths = paths.map((sourcePath) => join(
+      getDestinationDirectory({ sourcePath, sourceFolder, destinationFolder }),
+      getDestinationFileName({ sourceName: basename(sourcePath), mediaFileName, destinationMediaFileName: candidate }),
+    ));
     // eslint-disable-next-line no-await-in-loop
     const occupied = await Promise.all(destinationPaths.map((destinationPath) => exists(destinationPath)));
     if (!occupied.some(Boolean)) return candidate;
@@ -77,15 +85,12 @@ export async function moveRelatedCameraFiles({ paths, sourceFolder, destinationF
   destinationFolder: string,
   mediaFileName: string,
 }) {
-  const pathsByDirectory = Map.groupBy(paths, dirname);
-  const destinationMediaFileName = await getAvailableDestinationMediaFileName({ pathsByDirectory, sourceFolder, destinationFolder, mediaFileName });
-  return Promise.all(pathsByDirectory.entries().map(async ([sourceDir, sourcePaths]) => {
-    const destinationDir = join(destinationFolder, relative(sourceFolder, sourceDir));
+  const destinationMediaFileName = await getAvailableDestinationMediaFileName({ paths, sourceFolder, destinationFolder, mediaFileName });
+  return Promise.all(paths.map(async (sourcePath) => {
+    const destinationDir = getDestinationDirectory({ sourcePath, sourceFolder, destinationFolder });
     await mkdir(destinationDir, { recursive: true });
-    return Promise.all(sourcePaths.map(async (sourcePath) => {
-      const destinationPath = join(destinationDir, getDestinationFileName({ sourceName: basename(sourcePath), mediaFileName, destinationMediaFileName }));
-      await moveFile({ sourcePath, destinationPath });
-      return { sourcePath, destinationPath };
-    }));
+    const destinationPath = join(destinationDir, getDestinationFileName({ sourceName: basename(sourcePath), mediaFileName, destinationMediaFileName }));
+    await moveFile({ sourcePath, destinationPath });
+    return { sourcePath, destinationPath };
   }));
 }
