@@ -185,12 +185,6 @@ export default ({ app, mainWindow, newVersion, isStoreBuild, openExternal }: {
               },
             },
             {
-              label: esc(t('DaVinci Resolve marker importer script')),
-              click() {
-                mainWindow.webContents.send('exportEdlFile', 'resolve-marker-importer-script');
-              },
-            },
-            {
               label: esc(t('Install DaVinci Resolve importer')),
               click() {
                 mainWindow.webContents.send('installResolveMarkerImporter');

@@ -83,6 +83,9 @@ def all_clips(folder):
 def marker_at(markers, frame):
     return markers.get(frame) or markers.get(str(frame))
 
+def is_proxy_path(source_path):
+    return any(part.casefold() == 'proxy' for part in os.path.normpath(source_path).split(os.sep)[:-1])
+
 def load_sidecar(source_path):
     sidecar_path = source_path + SIDECAR_SUFFIX
     if not os.path.isfile(sidecar_path):
@@ -95,19 +98,26 @@ def load_sidecar(source_path):
 
 def import_clip_metadata(clip, manifest):
     metadata = manifest.get('metadata') or {}
-    resolve_metadata = {}
+    resolve_metadata = []
     if metadata.get('description'):
-        resolve_metadata['Description'] = metadata['description']
+        resolve_metadata.append(('Description', metadata['description']))
     if metadata.get('keywords'):
-        resolve_metadata['Keywords'] = ', '.join(metadata['keywords'])
+        resolve_metadata.append(('Keywords', ', '.join(metadata['keywords'])))
     if metadata.get('rating'):
-        resolve_metadata['Rating'] = str(metadata['rating'])
+        resolve_metadata.append(('Rating', str(metadata['rating'])))
+    if metadata.get('projects'):
+        resolve_metadata.append(('Projects', ', '.join(metadata['projects'])))
+    if metadata.get('status'):
+        resolve_metadata.append(('Status', metadata['status']))
     if not resolve_metadata:
         return False
-    if not clip.SetMetadata(resolve_metadata):
-        print('cut2resolve: could not update clip metadata on ' + clip.GetName())
-        return False
-    return True
+    updated = False
+    for key, value in resolve_metadata:
+        if clip.SetMetadata({key: value}):
+            updated = True
+        else:
+            print('cut2resolve: could not update %s metadata on %s' % (key, clip.GetName()))
+    return updated
 
 def import_markers(clip, manifest):
     added = 0
@@ -144,6 +154,8 @@ def main():
     totals = [0, 0, 0, 0]
     for clip in all_clips(project.GetMediaPool().GetRootFolder()):
         source_path = clip.GetClipProperty('File Path') or ''
+        if is_proxy_path(source_path):
+            continue
         manifest = load_sidecar(source_path)
         if manifest is None:
             continue

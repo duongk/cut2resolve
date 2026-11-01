@@ -129,7 +129,7 @@ import WhatsNew from './components/WhatsNew';
 import mainApi from './mainApi.js';
 import type { AppEvent } from '../../main/index.js';
 import { appName } from '../../main/common.js';
-import { parse as parsePath, join as pathJoin, basename, dirname, relative } from './util/path';
+import { parse as parsePath, join as pathJoin, basename, dirname, isAbsolute, relative } from './util/path';
 import { findRelatedCameraFiles, moveRelatedCameraFiles } from './fileBrowserOperations';
 
 const { ipcRenderer, webUtils } = window.require('electron');
@@ -2017,9 +2017,44 @@ function App() {
     if (selectedFolder != null) setFolderPath(selectedFolder);
   }, [folderPath, t]);
 
+  const moveRelatedCameraFilesToFolder = useCallback(async (path: string, destinationFolder: string) => {
+    await withErrorHandling(async () => {
+      const sourceFolder = dirname(path);
+      const destinationRelativeToSource = relative(sourceFolder, destinationFolder);
+      if (destinationRelativeToSource === '' || (!destinationRelativeToSource.startsWith('..') && !isAbsolute(destinationRelativeToSource))) {
+        getSwal().toast.fire({ icon: 'info', title: t('Choose a folder outside the source folder') });
+        return;
+      }
+
+      const relatedPaths = await findRelatedCameraFiles(path);
+      if (relatedPaths.length === 0) {
+        getSwal().toast.fire({ icon: 'info', title: t('No related camera files found') });
+        return;
+      }
+
+      const { isConfirmed } = await getSwal().Swal.fire({
+        icon: 'warning',
+        title: t('Move {{count}} related camera files?', { count: relatedPaths.length }),
+        text: `${t('The Proxy folder structure will be preserved. Existing destination files will receive a -1, -2, etc. suffix.')}\n\n${relatedPaths.map((relatedPath) => relative(sourceFolder, relatedPath)).join('\n')}`,
+        confirmButtonText: t('Move files'),
+        showCancelButton: true,
+      });
+      if (!isConfirmed) return;
+
+      setWorking({ text: t('Moving related camera files') });
+      try {
+        await moveRelatedCameraFiles({ paths: relatedPaths, sourceFolder, destinationFolder, mediaFileName: basename(path) });
+        setFolderBrowserRefreshKey((value) => value + 1);
+      } finally {
+        setWorking(undefined);
+      }
+    }, t('Failed to move related camera files'));
+  }, [t, withErrorHandling, setWorking]);
+
   const handleFolderFileAction = useCallback(async (path: string, action: FolderFileAction) => {
     if (isFolderOpenFileAction(action)) {
-      userOpenFiles([path], action);
+      await userOpenFiles([path], action);
+      if (action === 'open') window.requestAnimationFrame(() => videoContainerRef.current?.focus());
       return;
     }
 
@@ -2071,7 +2106,7 @@ function App() {
         setWorking(undefined);
       }
     }, action === 'moveRelatedFiles' ? t('Failed to move related camera files') : t('Failed to move related camera files to Trash'));
-  }, [t, userOpenFiles, withErrorHandling, setWorking]);
+  }, [t, userOpenFiles, withErrorHandling, setWorking, videoContainerRef]);
 
   const concatBatch = useCallback(() => {
     if (batchFiles.length < 2) {
@@ -2678,6 +2713,7 @@ function App() {
                         width={leftPaneWidth}
                         hasOpenFile={isFileOpened}
                         onFileAction={handleFolderFileAction}
+                        onMoveRelatedFiles={moveRelatedCameraFilesToFolder}
                         onChangeFolder={openFolderBrowserDialog}
                         onOpenLocation={setFolderPath}
                         onClose={() => setFolderPath(undefined)}
@@ -2702,7 +2738,7 @@ function App() {
                   {(folderPath != null || showLeftBar) && <button type="button" aria-label={t('Resize left pane')} title={t('Drag to resize left pane')} style={paneResizeHandleStyle} onMouseDown={startPaneResize('left')} />}
 
                   {/* Middle part (also shown in fullscreen): */}
-                  <div style={{ position: 'relative', flexGrow: 1, overflow: 'hidden' }} ref={videoContainerRef}>
+                  <div style={{ position: 'relative', flexGrow: 1, overflow: 'hidden' }} ref={videoContainerRef} tabIndex={-1}>
                     {!isFileOpened && <NoFileLoaded mifiLink={mifiLink} currentCutSeg={currentCutSeg} onClick={openFilesDialog} darkMode={darkMode} keyBindingByAction={keyBindingByAction} />}
 
                     <div className="no-user-select" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, visibility: !isFileOpened || !hasVideo || bigWaveformEnabled ? 'hidden' : undefined }} onWheel={onTimelineWheel}>

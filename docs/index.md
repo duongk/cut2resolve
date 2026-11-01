@@ -69,14 +69,13 @@ Same as CSV but `<tab>` instead.
 1. Once, use **File → Export project → Install DaVinci Resolve importer**. It installs `cut2resolve import.py` in Resolve's user script folder and opens that folder for you. Restart Resolve or refresh its Scripts menu:
    - macOS: `~/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/Scripts/Utility/`
    - Windows: `%AppData%\Blackmagic Design\DaVinci Resolve\Fusion\Scripts\Utility\`
-   You can alternatively use **DaVinci Resolve marker importer script** to save the same file anywhere manually.
 2. With **Auto save project file** enabled in Settings, LosslessCut automatically writes and updates each marker sidecar beside its original file after range changes. The Clip metadata panel above Segments to export stores its description, projects, keywords, rating and status in the same sidecar; it never changes the camera original. Keep the sidecar with the source when moving or copying media. You can also export one manually.
 3. In Resolve, import the original source clips into the Media Pool. Do not import a proxy in their place.
 4. Run the one importer from **Workspace → Scripts → Utility**. It processes every imported original that has its adjacent sidecar.
 
 The importer finds sidecars only by starting from each imported original's full file path. It will not import, move, relink, transcode, or modify original files. It does not scan or change a `Proxy` subfolder. Running it again updates markers previously created by the importer while preserving any manual Resolve marker at the same frame.
 
-The same importer also updates Resolve clip **Description**, **Keywords**, and **Rating** from the Clip metadata panel. Segment **Notes** become the Resolve marker note, while segment **Keywords** are added as a labeled line in that note because Resolve markers do not have a separate keywords field. Projects and Status remain in the sidecar for logging; they are not written to a built-in Resolve field.
+The same importer also updates Resolve clip **Description**, **Keywords**, and **Rating** from the Clip metadata panel, and attempts to update **Projects** and **Status** when those metadata fields are available in Resolve. Segment **Notes** become the Resolve marker note, while segment **Keywords** are added as a labeled line in that note because Resolve markers do not have a separate keywords field.
 
 Resolve allows only one marker at a given source frame. Existing manual markers are left untouched; the script reports any range it could not add. Keep the `.llc` project as the portable source of truth and export a fresh sidecar after changing its ranges.
 

@@ -1,3 +1,4 @@
+import type { DragEvent } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type * as os from 'node:os';
 import { FaChevronDown, FaChevronRight, FaFileVideo, FaFolder, FaFolderOpen, FaHdd, FaHome, FaSync, FaTimes } from 'react-icons/fa';
@@ -108,6 +109,13 @@ function MediaFile({ path, name, depth, selectedPath, hasOpenFile, onFileAction 
       title={path}
       style={{ ...rowStyle, paddingLeft: `${depth * 14 + 6}px`, background: selectedPath === path ? 'var(--gray-7)' : 'transparent' }}
       onClick={() => onFileAction(path, 'open')}
+      draggable
+      onDragStart={(event) => {
+        const { dataTransfer } = event;
+        dataTransfer.effectAllowed = 'move';
+        dataTransfer.setData('application/x-cut2resolve-media-path', path);
+        dataTransfer.setData('text/plain', path);
+      }}
     >
       <FaFileVideo {...(selectedPath === path ? { color: primaryColor } : {})} />
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
@@ -115,12 +123,14 @@ function MediaFile({ path, name, depth, selectedPath, hasOpenFile, onFileAction 
   );
 }
 
-function Directory({ path, depth, selectedPath, hasOpenFile, onFileAction }: {
+function Directory({ path, depth, selectedPath, hasOpenFile, onFileAction, onMoveRelatedFiles, onFocusFolder }: {
   path: string,
   depth: number,
   selectedPath: string | undefined,
   hasOpenFile: boolean,
   onFileAction: (path: string, action: FolderFileAction) => void,
+  onMoveRelatedFiles: (sourcePath: string, destinationFolder: string) => void,
+  onFocusFolder: (path: string) => void,
 }) {
   const { t } = useTranslation();
   interface TreeEntry { name: string, path: string, isDirectory: boolean }
@@ -129,6 +139,12 @@ function Directory({ path, depth, selectedPath, hasOpenFile, onFileAction }: {
   const [entries, setEntries] = useState<TreeEntry[]>();
   const [error, setError] = useState<string>();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isDropTarget, setIsDropTarget] = useState(false);
+  const folderButtonRef = useRef<HTMLButtonElement>(null);
+  const contextMenuTemplate = useMemo(() => [
+    { label: t('Open this folder'), click: () => onFocusFolder(path) },
+  ], [onFocusFolder, path, t]);
+  useContextMenu(folderButtonRef, contextMenuTemplate);
 
   useEffect(() => {
     if (!expanded) return undefined;
@@ -156,11 +172,26 @@ function Directory({ path, depth, selectedPath, hasOpenFile, onFileAction }: {
   const toggle = useCallback(() => setExpanded((value) => !value), []);
   const refresh = useCallback(() => setRefreshKey((value) => value + 1), []);
   const indentation = { paddingLeft: `${depth * 14 + 6}px` };
+  const handleDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
+    const { dataTransfer } = event;
+    if (!dataTransfer.types.includes('application/x-cut2resolve-media-path')) return;
+    event.preventDefault();
+    dataTransfer.dropEffect = 'move';
+    setIsDropTarget(true);
+  }, []);
+  const handleDrop = useCallback((event: DragEvent<HTMLDivElement>) => {
+    const sourcePath = event.dataTransfer.getData('application/x-cut2resolve-media-path');
+    if (sourcePath === '') return;
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDropTarget(false);
+    onMoveRelatedFiles(sourcePath, path);
+  }, [onMoveRelatedFiles, path]);
 
   return (
-    <div>
+    <div onDragOver={handleDragOver} onDragLeave={() => setIsDropTarget(false)} onDrop={handleDrop} style={isDropTarget ? { background: 'var(--gray-6)' } : undefined}>
       <div style={{ display: 'flex', alignItems: 'center' }}>
-        <button type="button" title={expanded ? t('Collapse folder') : t('Expand folder')} style={{ ...rowStyle, ...indentation, flex: 1 }} onClick={toggle}>
+        <button type="button" ref={folderButtonRef} title={expanded ? t('Collapse folder') : t('Expand folder')} style={{ ...rowStyle, ...indentation, flex: 1 }} onClick={toggle}>
           {expanded ? <FaChevronDown size=".7em" /> : <FaChevronRight size=".7em" />}
           {expanded ? <FaFolderOpen color={primaryColor} /> : <FaFolder color={primaryColor} />}
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{basename(path)}</span>
@@ -170,7 +201,7 @@ function Directory({ path, depth, selectedPath, hasOpenFile, onFileAction }: {
       {expanded && (
         <>
           {entries?.map((entry) => (
-            entry.isDirectory ? <Directory key={entry.path} path={entry.path} depth={depth + 1} selectedPath={selectedPath} hasOpenFile={hasOpenFile} onFileAction={onFileAction} /> : <MediaFile key={entry.path} path={entry.path} name={entry.name} depth={depth + 1} selectedPath={selectedPath} hasOpenFile={hasOpenFile} onFileAction={onFileAction} />
+            entry.isDirectory ? <Directory key={entry.path} path={entry.path} depth={depth + 1} selectedPath={selectedPath} hasOpenFile={hasOpenFile} onFileAction={onFileAction} onMoveRelatedFiles={onMoveRelatedFiles} onFocusFolder={onFocusFolder} /> : <MediaFile key={entry.path} path={entry.path} name={entry.name} depth={depth + 1} selectedPath={selectedPath} hasOpenFile={hasOpenFile} onFileAction={onFileAction} />
           ))}
           {entries?.length === 0 && <div style={{ padding: '.2em .5em .2em', paddingLeft: `${(depth + 1) * 14 + 6}px`, color: 'var(--gray-10)', fontSize: '.85em' }}>{t('No media files')}</div>}
           {error && <div title={error} style={{ padding: '.2em .5em', color: 'var(--red-10)', fontSize: '.8em' }}>{t('Unable to read folder')}</div>}
@@ -180,12 +211,13 @@ function Directory({ path, depth, selectedPath, hasOpenFile, onFileAction }: {
   );
 }
 
-function FolderTree({ folderPath, selectedPath, width, hasOpenFile, onFileAction, onChangeFolder, onOpenLocation, onClose }: {
+function FolderTree({ folderPath, selectedPath, width, hasOpenFile, onFileAction, onMoveRelatedFiles, onChangeFolder, onOpenLocation, onClose }: {
   folderPath: string,
   selectedPath: string | undefined,
   width: number,
   hasOpenFile: boolean,
   onFileAction: (path: string, action: FolderFileAction) => void,
+  onMoveRelatedFiles: (sourcePath: string, destinationFolder: string) => void,
   onChangeFolder: () => void,
   onOpenLocation: (path: string) => void,
   onClose: () => void,
@@ -200,7 +232,7 @@ function FolderTree({ folderPath, selectedPath, width, hasOpenFile, onFileAction
         <button type="button" title={t('Close folder browser')} style={{ ...rowStyle, width: 'auto', padding: '.2em' }} onClick={onClose}><FaTimes /></button>
       </div>
       <MountedLocations folderPath={folderPath} onOpenLocation={onOpenLocation} />
-      <Directory path={folderPath} depth={0} selectedPath={selectedPath} hasOpenFile={hasOpenFile} onFileAction={onFileAction} />
+      <Directory path={folderPath} depth={0} selectedPath={selectedPath} hasOpenFile={hasOpenFile} onFileAction={onFileAction} onMoveRelatedFiles={onMoveRelatedFiles} onFocusFolder={onOpenLocation} />
     </aside>
   );
 }

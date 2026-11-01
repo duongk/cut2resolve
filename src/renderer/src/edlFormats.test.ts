@@ -261,11 +261,13 @@ it('formats a reusable Resolve importer that only reads adjacent marker sidecars
   expect(script).toContain("clip.GetClipProperty('File Path')");
   expect(script).toContain('source_path + SIDECAR_SUFFIX');
   expect(script).toContain("clip.AddMarker(frame, 'Blue', marker['name'], marker['note'], marker['duration'], custom_data)");
-  expect(script).toContain('clip.SetMetadata(resolve_metadata)');
-  expect(script).toContain("resolve_metadata['Keywords']");
+  expect(script).toContain('clip.SetMetadata({key: value})');
+  expect(script).toContain('(\'Keywords\', \', \'.join(metadata[\'keywords\']))');
+  expect(script).toContain('(\'Projects\', \', \'.join(metadata[\'projects\']))');
+  expect(script).toContain('(\'Status\', metadata[\'status\'])');
   expect(script).toContain("CUSTOM_DATA_PREFIXES = ('cut2resolve:', 'losslesscut:')");
   expect(script).toContain('clip.DeleteMarkerAtFrame(frame)');
-  expect(script).not.toContain('Proxy');
+  expect(script).toContain("part.casefold() == 'proxy'");
 });
 
 // https://github.com/mifi/lossless-cut/issues/1024

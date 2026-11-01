@@ -715,29 +715,29 @@ function SegmentList({
         transition={springAnimation}
       >
         <div ref={metadataPaneRef} style={{ flex: metadataPaneHeight == null ? '1 1 50%' : `0 0 ${metadataPaneHeight}px`, minHeight: 0, display: 'flex', flexDirection: 'column', borderBottom: '1px solid var(--gray-7)' }}>
-          <div style={{ padding: '.35em .5em .2em', color: 'var(--gray-12)', fontSize: '.8em' }} className="no-user-select">{t('Clip metadata')}</div>
+          <div style={{ padding: '.35em .5em .2em', color: 'var(--gray-12)', fontSize: '.95em' }} className="no-user-select">{t('Clip metadata')}</div>
           <div style={{ padding: '0 .5em .5em', overflowY: 'auto', display: 'grid', gap: '.35em' }} className="consistent-scrollbar">
-            <div style={{ display: 'grid', gap: '.1em', fontSize: '.72em' }}>
+            <div style={{ display: 'grid', gap: '.15em', fontSize: '.9em' }}>
               <span>{t('Description')}</span>
-              <textarea value={clipMetadata.description ?? ''} onChange={(event) => updateMetadata({ description: event.target.value || undefined })} rows={3} style={{ resize: 'vertical', boxSizing: 'border-box', width: '100%', font: 'inherit', fontSize: '1.1em', borderRadius: '.4em', backgroundColor: 'var(--gray-3)', color: 'var(--gray-12)', border: '1px solid var(--gray-7)' }} />
+              <textarea value={clipMetadata.description ?? ''} onChange={(event) => updateMetadata({ description: event.target.value || undefined })} rows={3} style={{ resize: 'vertical', boxSizing: 'border-box', width: '100%', font: 'inherit', fontSize: '1em', borderRadius: '.4em', backgroundColor: 'var(--gray-3)', color: 'var(--gray-12)', border: '1px solid var(--gray-7)' }} />
             </div>
-            <div style={{ display: 'grid', gap: '.1em', fontSize: '.72em' }}>
+            <div style={{ display: 'grid', gap: '.15em', fontSize: '.9em' }}>
               <span>{t('Projects')}</span>
               <TextInput value={(clipMetadata.projects ?? []).join(', ')} placeholder={t('Comma-separated')} onChange={(event) => updateMetadata({ projects: commaSeparated(event.target.value) })} />
             </div>
-            <div style={{ display: 'grid', gap: '.1em', fontSize: '.72em' }}>
+            <div style={{ display: 'grid', gap: '.15em', fontSize: '.9em' }}>
               <span>{t('Keywords')}</span>
               <TextInput value={(clipMetadata.keywords ?? []).join(', ')} placeholder={t('Comma-separated')} onChange={(event) => updateMetadata({ keywords: commaSeparated(event.target.value) })} />
             </div>
             <div style={{ display: 'flex', gap: '.45em' }}>
-              <div style={{ display: 'grid', gap: '.1em', fontSize: '.72em', flex: 1 }}>
+              <div style={{ display: 'grid', gap: '.15em', fontSize: '.9em', flex: 1 }}>
                 <span>{t('Rating')}</span>
                 <Select value={clipMetadata.rating ?? ''} onChange={(event) => updateMetadata({ rating: event.target.value === '' ? undefined : Number(event.target.value) })}>
                   <option value="">{t('Unrated')}</option>
                   {[1, 2, 3, 4, 5].map((rating) => <option key={rating} value={rating}>{rating}</option>)}
                 </Select>
               </div>
-              <div style={{ display: 'grid', gap: '.1em', fontSize: '.72em', flex: 1 }}>
+              <div style={{ display: 'grid', gap: '.15em', fontSize: '.9em', flex: 1 }}>
                 <span>{t('Status')}</span>
                 <Select value={clipMetadata.status ?? ''} onChange={(event) => updateMetadata({ status: event.target.value === '' ? undefined : event.target.value as ClipMetadata['status'] })}>
                   <option value="">{t('Unreviewed')}</option>
