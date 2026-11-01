@@ -129,7 +129,7 @@ import WhatsNew from './components/WhatsNew';
 import mainApi from './mainApi.js';
 import type { AppEvent } from '../../main/index.js';
 import { appName } from '../../main/common.js';
-import { parse as parsePath, join as pathJoin, basename, dirname, isAbsolute, relative } from './util/path';
+import { parse as parsePath, join as pathJoin, basename, dirname, relative } from './util/path';
 import { findRelatedCameraFiles, moveRelatedCameraFiles } from './fileBrowserOperations';
 
 const { ipcRenderer, webUtils } = window.require('electron');
@@ -2024,8 +2024,8 @@ function App() {
     await withErrorHandling(async () => {
       const sourceFolder = dirname(path);
       const destinationRelativeToSource = relative(sourceFolder, destinationFolder);
-      if (destinationRelativeToSource === '' || (!destinationRelativeToSource.startsWith('..') && !isAbsolute(destinationRelativeToSource))) {
-        getSwal().toast.fire({ icon: 'info', title: t('Choose a folder outside the source folder') });
+      if (destinationRelativeToSource === '') {
+        getSwal().toast.fire({ icon: 'info', title: t('Choose a different destination folder') });
         return;
       }
 
@@ -2057,7 +2057,13 @@ function App() {
   const handleFolderFileAction = useCallback(async (path: string, action: FolderFileAction) => {
     if (isFolderOpenFileAction(action)) {
       await userOpenFiles([path], action);
-      if (action === 'open') window.requestAnimationFrame(() => document.body.focus());
+      if (action === 'open') {
+        window.requestAnimationFrame(() => {
+          if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body) {
+            document.activeElement.blur();
+          }
+        });
+      }
       return;
     }
 
@@ -2095,7 +2101,7 @@ function App() {
       const { isConfirmed } = await getSwal().Swal.fire({
         icon: 'warning',
         title: t('Move {{count}} related camera files to Trash?', { count: relatedPaths.length }),
-        text: `${t('They will be moved to your system Trash and can be restored there.')}\n\n${relatedPaths.map((relatedPath) => relative(dirname(path), relatedPath)).join('\n')}`,
+        text: `${t('They will be moved to your system Trash and can be restored there. On a volume without a system Trash, they will be moved to a Trash folder instead.')}\n\n${relatedPaths.map((relatedPath) => relative(dirname(path), relatedPath)).join('\n')}`,
         confirmButtonText: t('Move to Trash'),
         showCancelButton: true,
       });
@@ -2103,7 +2109,8 @@ function App() {
 
       setWorking({ text: t('Moving related camera files to Trash') });
       try {
-        await Promise.all(relatedPaths.map((relatedPath) => trashFile(relatedPath)));
+        const sourceFolder = dirname(path);
+        await Promise.all(relatedPaths.map((relatedPath) => trashFile(relatedPath, pathJoin(sourceFolder, 'Trash', relative(sourceFolder, relatedPath)))));
         setFolderBrowserRefreshKey((value) => value + 1);
       } finally {
         setWorking(undefined);
@@ -2115,13 +2122,15 @@ function App() {
     if (event.target !== document.body || folderPath == null || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     const paths = [...document.querySelectorAll<HTMLButtonElement>('[data-folder-media-path]')].map((element) => element.dataset['folderMediaPath']).filter((path): path is string => path != null);
     if (paths.length === 0) return;
+    // Folder navigation takes priority over configurable segment shortcuts while browsing files.
+    event.preventDefault();
+    event.stopImmediatePropagation();
     const currentIndex = filePath == null ? -1 : paths.indexOf(filePath);
     const nextIndex = event.key === 'ArrowDown'
       ? Math.min(paths.length - 1, currentIndex + 1)
       : Math.max(0, currentIndex < 0 ? paths.length - 1 : currentIndex - 1);
     const nextPath = paths[nextIndex];
     if (nextPath == null || nextPath === filePath) return;
-    event.preventDefault();
     handleFolderFileAction(nextPath, 'open').catch(console.error);
   }, [filePath, folderPath, handleFolderFileAction]);
 

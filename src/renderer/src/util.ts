@@ -27,7 +27,7 @@ const appPath = app.getAppPath();
 export { isWindows, isMac, appVersion, appPath };
 
 
-export const trashFile = async (path: string) => ipcRenderer.invoke('tryTrashItem', path);
+export const trashFile = async (path: string, fallbackPath?: string) => ipcRenderer.invoke('tryTrashItem', { path, fallbackPath });
 
 export const showItemInFolder = async (path: string) => ipcRenderer.invoke('showItemInFolder', path);
 
