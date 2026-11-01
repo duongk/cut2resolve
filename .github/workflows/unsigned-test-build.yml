@@ -1,0 +1,78 @@
+name: Unsigned test build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    name: macOS DMGs
+    runs-on: macos-latest
+    timeout-minutes: 60
+    env:
+      # This workflow is for private testing from a fork. Do not use the
+      # upstream release credentials or attempt signing/notarization here.
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: yarn
+
+      - run: yarn install --immutable --network-timeout 1000000
+
+      - name: Download bundled FFmpeg
+        run: |
+          yarn download-ffmpeg-darwin-x64
+          yarn download-ffmpeg-darwin-arm64
+
+      - run: yarn build
+
+      # Request DMG explicitly so the Mac App Store target is never built.
+      - name: Package unsigned macOS DMGs
+        run: yarn electron-builder --mac dmg --x64 --arm64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LosslessCut-mac-unsigned
+          path: |
+            dist/LosslessCut-mac-arm64.dmg
+            dist/LosslessCut-mac-x64.dmg
+          if-no-files-found: error
+
+  windows:
+    name: Windows archive
+    runs-on: windows-2022
+    timeout-minutes: 60
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: yarn
+
+      - run: yarn install --immutable --network-timeout 1000000
+
+      - name: Download bundled FFmpeg
+        run: yarn download-ffmpeg-win32-x64
+
+      - run: yarn build
+
+      # Request 7z explicitly so the Microsoft Store APPX target is never built.
+      - name: Package unsigned Windows archive
+        run: yarn electron-builder --win 7z --x64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LosslessCut-windows-unsigned
+          path: dist/LosslessCut-win-x64.7z
+          if-no-files-found: error
