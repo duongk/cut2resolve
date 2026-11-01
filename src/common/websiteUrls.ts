@@ -1,45 +1,27 @@
-// Links from the app that go through the LosslessCut website (https://losslesscut.app, built from website/ in this repo).
-//
-// The app links to https://losslesscut.app/go/<name>, which redirects to the target for that name below: a page on the website,
-// or another site (e.g. GitHub). The website build (website/scripts/appLinks.ts) writes those redirects, and fails if a page or
-// #anchor on the website doesn't exist. So a target can move by changing it here, without breaking the links in app versions
-// that are already released.
-//
-// Released app versions keep using the names, so never rename or remove one: only add names, and change targets.
-//
-// App versions from before this link to https://mifi.no/losslesscut/<name> (same names; thanks was https://mifi.no/thanks)
-// instead, which the mifi.no infrastructure (not in this repo) redirects. For a change of target here to also reach those
-// versions, mifi.no must redirect that name to https://losslesscut.app/go/<name>. Only these names, not everything under
-// /losslesscut/: old versions also fetch https://mifi.no/losslesscut/config.json, which must keep working.
+// Public links owned by cut2resolve. Keep each target in this one place so the
+// desktop application does not direct people to the upstream project.
 
-import { discordInviteUrl, githubUrl } from './links.ts';
-
-export const websiteUrl = 'https://losslesscut.app';
+const projectGithubUrl = 'https://github.com/duongk/cut2resolve';
+export const websiteUrl = projectGithubUrl;
 
 export const appLinkTargets = {
-  usage: '/docs/getting-started#your-first-cut',
-  faq: '/docs/faq',
-  troubleshooting: '/docs/troubleshooting',
-  'file-name-template': '/docs/file-name-template',
-  'select-segments-by-expression': '/docs/expressions#select-segments-by-expression',
-  'edit-segments-by-expression': '/docs/expressions#edit-segments-by-expression',
-  'select-tracks-by-expression': '/docs/expressions#select-tracks-by-expression',
-  'privacy-policy': '/privacy-policy',
-  // uploaded to each release by .github/workflows/build.yml
-  licenses: `${githubUrl}/releases/latest/download/licenses.txt`,
-  // not a page: the update check in src/main/updateChecker.ts
-  'latest-release': 'https://api.github.com/repos/mifi/lossless-cut/releases/latest',
-  discussions: `${githubUrl}/discussions`,
-  // the issue list, like mifi.no/losslesscut/bug-report
-  'bug-report': `${githubUrl}/issues`,
-  // the issue form in .github/ISSUE_TEMPLATE
-  'feature-request': `${githubUrl}/issues/new?template=3-feature.yml`,
-  thanks: 'https://mifi.no/thanks/',
-  discord: discordInviteUrl,
+  usage: `${projectGithubUrl}#getting-started`,
+  faq: `${projectGithubUrl}#documentation`,
+  troubleshooting: `${projectGithubUrl}/issues`,
+  'file-name-template': `${projectGithubUrl}/blob/master/docs/file-name-template.md`,
+  'select-segments-by-expression': `${projectGithubUrl}/blob/master/docs/expressions.md`,
+  'edit-segments-by-expression': `${projectGithubUrl}/blob/master/docs/expressions.md`,
+  'select-tracks-by-expression': `${projectGithubUrl}/blob/master/docs/expressions.md`,
+  'privacy-policy': `${projectGithubUrl}/blob/master/website/src/legal/privacy-policy.md`,
+  licenses: `${projectGithubUrl}/releases/latest/download/licenses.txt`,
+  'latest-release': 'https://api.github.com/repos/duongk/cut2resolve/releases/latest',
+  discussions: `${projectGithubUrl}/discussions`,
+  'bug-report': `${projectGithubUrl}/issues`,
+  'feature-request': `${projectGithubUrl}/issues/new?template=3-feature.yml`,
+  thanks: projectGithubUrl,
+  discord: `${projectGithubUrl}/discussions`,
 } as const;
 
 export type AppLinkName = keyof typeof appLinkTargets;
 
-export const appLinkPrefix = '/go/';
-
-export const getAppLinkUrl = (name: AppLinkName) => `${websiteUrl}${appLinkPrefix}${name}`;
+export const getAppLinkUrl = (name: AppLinkName) => appLinkTargets[name];

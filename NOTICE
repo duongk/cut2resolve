@@ -1,0 +1,39 @@
+cut2resolve
+Copyright (C) 2026 Kiet Duong
+Repository: https://github.com/duongk/cut2resolve
+
+cut2resolve is an independent open-source project and is not affiliated with,
+sponsored, or endorsed by Blackmagic Design Pty. Ltd. DaVinci Resolve is a
+trademark of Blackmagic Design Pty. Ltd.
+
+This program is a fork of and contains code from LosslessCut:
+
+  Original project: LosslessCut
+  Original author: Mikael Finstad (mifi)
+  Upstream repository: https://github.com/mifi/lossless-cut
+  Upstream license: GNU General Public License, version 2 only (GPL-2.0-only)
+
+Modifications and enhancements
+------------------------------
+
+Modified and maintained by Kiet Duong (2026). Key changes include a DaVinci
+Resolve marker workflow: named in/out ranges can be represented in sidecar
+files and imported into Resolve as Media Pool duration markers, without
+modifying the original source media. The workflow protects camera proxies in
+directories named "Proxy".
+
+License
+-------
+
+This fork remains licensed under the GNU General Public License, version 2
+only. The complete license text is in LICENSE. It is distributed without any
+warranty; see LICENSE for the complete terms.
+
+Third-party components
+----------------------
+
+cut2resolve includes FFmpeg and other dependencies, each under its applicable
+license. The exact notices for bundled dependencies are generated into
+licenses.txt for release artifacts. In particular, the license that applies to
+the bundled FFmpeg build depends on that build's configuration; consult its
+included notice before redistribution.

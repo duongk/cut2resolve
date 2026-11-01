@@ -1,10 +1,10 @@
 {
-  "name": "lossless-cut",
-  "productName": "LosslessCut",
-  "desktopName": "losslesscut.desktop",
-  "description": "The swiss army knife of lossless video/audio editing",
-  "copyright": "Copyright © 2026 ${author}",
-  "version": "3.70.2",
+  "name": "cut2resolve",
+  "productName": "cut2resolve",
+  "desktopName": "cut2resolve.desktop",
+  "description": "Lossless video editing with DaVinci Resolve marker export",
+  "copyright": "Copyright © 2026 Kiet Duong",
+  "version": "0.1.0",
   "main": "./out/main/index.js",
   "homepage": "./",
   "type": "module",
@@ -24,10 +24,9 @@
     "lint": "oxlint --type-aware --deny-warnings --ignore-pattern 'website/**' && oxlint --deny-warnings website",
     "check": "yarn tsc && yarn lint && yarn test run && yarn build && yarn check-licenses && yarn scan-i18n && yarn dedupe --check && yarn generate-docs",
     "pack-mac": "yarn build && electron-builder --mac dmg",
-    "pack-mas-dev": "yarn build && electron-builder --mac mas-dev -c.mas.provisioningProfile=LosslessCut_Dev.provisionprofile -c.mas.identity='Mikael Finstad (JH4PH8B3C8)'",
     "pack-win": "yarn build && electron-builder --win zip --x64",
     "postinstall": "electron-builder install-app-deps",
-    "version": "node script/postversion.ts && git add no.mifi.losslesscut.appdata.xml",
+    "version": "node script/postversion.ts && git add io.github.duongk.cut2resolve.appdata.xml",
     "pack-linux": "yarn build && electron-builder --linux",
     "scan-i18n": "i18next-cli -c i18next.config.scan.ts extract",
     "generate-icon": "mkdirp icon-build build-resources/appx && node script/generateIcon.ts",
@@ -37,14 +36,10 @@
     "check-licenses": "node script/checkLicenses.ts",
     "upload-artifacts": "node script/uploadArtifacts.ts"
   },
-  "author": {
-    "name": "Mikael Finstad",
-    "email": "finstaden@gmail.com",
-    "url": "https://mifi.no/"
-  },
+  "author": "Kiet Duong",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mifi/lossless-cut.git"
+    "url": "https://github.com/duongk/cut2resolve.git"
   },
   "license": "GPL-2.0-only",
   "devDependencies": {
@@ -174,7 +169,7 @@
       "enableEmbeddedAsarIntegrityValidation": true,
       "onlyLoadAppFromAsar": true
     },
-    "appId": "no.mifi.losslesscut",
+    "appId": "io.github.duongk.cut2resolve",
     "afterPack": "./script/afterPack.ts",
     "artifactName": "${productName}-${os}-${arch}.${ext}",
     "extraResources": [
@@ -186,13 +181,9 @@
     "mac": {
       "hardenedRuntime": true,
       "notarize": true,
-      "appId": "no.mifi.losslesscut-mac",
+      "appId": "io.github.duongk.cut2resolve-mac",
       "category": "public.app-category.productivity",
       "target": [
-        {
-          "target": "mas",
-          "arch": "universal"
-        },
         {
           "target": "dmg",
           "arch": [
@@ -310,8 +301,8 @@
           "ext": [
             "llc"
           ],
-          "name": "LosslessCut project",
-          "description": "LosslessCut project",
+          "name": "cut2resolve project",
+          "description": "cut2resolve project",
           "role": "Editor"
         }
       ],
@@ -319,8 +310,8 @@
         "ITSAppUsesNonExemptEncryption": false,
         "UTExportedTypeDeclarations": [
           {
-            "UTTypeIdentifier": "no.mifi.losslesscut.project",
-            "UTTypeDescription": "LosslessCut project",
+            "UTTypeIdentifier": "io.github.duongk.cut2resolve.project",
+            "UTTypeDescription": "cut2resolve project",
             "UTTypeConformsTo": [
               "public.plain-text"
             ],
@@ -333,23 +324,8 @@
         ]
       }
     },
-    "mas": {
-      "artifactName": "${productName}-${os}-${arch}-DONT-USE-THIS-FILE.${ext}",
-      "hardenedRuntime": false,
-      "notarize": false,
-      "entitlements": "entitlements.mas.plist",
-      "entitlementsInherit": "entitlements.mas.inherit.plist",
-      "provisioningProfile": "LosslessCut_Mac_App_Store_provisioning_profile.provisionprofile",
-      "binaries": [
-        "Contents/Resources/ffmpeg",
-        "Contents/Resources/ffprobe"
-      ]
-    },
     "win": {
-      "target": [
-        "7z",
-        "appx"
-      ],
+      "target": ["7z"],
       "extraResources": [
         {
           "from": "ffmpeg/win32-${arch}/lib",
@@ -456,21 +432,14 @@
           "ext": [
             "llc"
           ],
-          "name": "LosslessCut project",
-          "description": "LosslessCut project",
+          "name": "cut2resolve project",
+          "description": "cut2resolve project",
           "role": "Editor"
         }
       ]
     },
-    "appx": {
-      "artifactName": "${productName}-${os}-${arch}-DONT-USE-THIS-FILE.${ext}",
-      "applicationId": "LosslessCut",
-      "identityName": "57275mifi.no.LosslessCut",
-      "publisher": "CN=2C479316-22A8-4D63-BC38-F0FB9AB0B974",
-      "publisherDisplayName": "mifi.no"
-    },
     "linux": {
-      "executableName": "losslesscut",
+      "executableName": "cut2resolve",
       "extraResources": [
         {
           "from": "ffmpeg/linux-${arch}/lib",

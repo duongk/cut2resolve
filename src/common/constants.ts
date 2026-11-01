@@ -1,7 +1,7 @@
 import { githubUrl } from './links.ts';
 import { getAppLinkUrl, websiteUrl } from './websiteUrls.ts';
 
-export { githubUrl, supportEmail } from './links.ts';
+export { githubUrl } from './links.ts';
 
 export const homepageUrl = `${websiteUrl}/`;
 export const getReleaseUrl = (version: string) => `${githubUrl}/releases/tag/v${version}`;
