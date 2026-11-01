@@ -6,7 +6,7 @@ import { ZodError } from 'zod';
 import { parseSrtToSegments, formatSrt, parseCuesheet, parseXmeml, parseFcpXml, parseCsv, parseCutlist, parsePbf, parseEdl, formatCsvHuman, formatTsvHuman, formatCsvFrames, formatCsvSeconds, formatResolveMarkerImporterScript, formatResolveMarkerManifest, parseCsvTime, getFrameValParser, parseDvAnalyzerSummaryTxt, parseOtio } from './edlFormats';
 import { askForYouTubeInput, showOpenDialog } from './dialogs';
 import { getOutPath } from './util';
-import type { EdlExportType, EdlFileType, EdlImportType, GetFrameCount, LlcProject, SegmentBase, StateSegment } from './types';
+import type { ClipMetadata, EdlExportType, EdlFileType, EdlImportType, GetFrameCount, LlcProject, SegmentBase, StateSegment } from './types';
 import { llcProjectV1Schema, llcProjectV2Schema } from './types';
 import { mapSaveableSegments } from './segments';
 import isDev from './isDev';
@@ -96,13 +96,46 @@ export async function saveLlcProject({ savePath, mediaFilePath, cutSegments }: {
   await writeFile(savePath, JSON5.stringify(projectData, null, 2));
 }
 
-export async function saveResolveMarkerManifest({ savePath, mediaFilePath, cutSegments, getFrameCount }: {
+export async function saveResolveMarkerManifest({ savePath, mediaFilePath, cutSegments, getFrameCount, clipMetadata }: {
   savePath: string,
   mediaFilePath: string,
   cutSegments: StateSegment[],
   getFrameCount: GetFrameCount,
+  clipMetadata?: ClipMetadata | undefined,
 }) {
-  await writeFile(savePath, formatResolveMarkerManifest({ mediaFilePath, cutSegments, getFrameCount }));
+  await writeFile(savePath, formatResolveMarkerManifest({ mediaFilePath, cutSegments, getFrameCount, clipMetadata }));
+}
+
+function parseClipMetadata(value: unknown): ClipMetadata {
+  if (value == null || typeof value !== 'object' || Array.isArray(value)) return {};
+  const record = value as Record<string, unknown>;
+  const strings = (key: string) => {
+    const valueForKey = record[key];
+    return Array.isArray(valueForKey) ? valueForKey.filter((item): item is string => typeof item === 'string') : undefined;
+  };
+  const { description, rating, status } = record;
+  return {
+    ...(typeof description === 'string' && { description }),
+    ...(strings('projects') != null && { projects: strings('projects') }),
+    ...(strings('keywords') != null && { keywords: strings('keywords') }),
+    ...(typeof rating === 'number' && Number.isSafeInteger(rating) && rating >= 1 && rating <= 5 && { rating }),
+    ...(['keep', 'maybe', 'reject', 'unreviewed'].includes(status as string) && { status: status as ClipMetadata['status'] }),
+  };
+}
+
+/** Loads only metadata from the adjacent sidecar; old marker sidecars remain valid. */
+export async function loadResolveMarkerManifestMetadata(mediaFilePath: string): Promise<ClipMetadata> {
+  const sidecarPath = getOutPath({ filePath: mediaFilePath, fileName: `${basename(mediaFilePath)}.resolve-markers.json` });
+  try {
+    const manifest: unknown = JSON.parse(await readFile(sidecarPath, 'utf8'));
+    if (manifest == null || typeof manifest !== 'object' || Array.isArray(manifest)) return {};
+    const record = manifest as Record<string, unknown>;
+    if (record['version'] !== 1 || record['sourceFileName'] !== basename(mediaFilePath)) return {};
+    return parseClipMetadata(record['metadata']);
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') console.warn('Unable to read Resolve marker sidecar metadata', error);
+    return {};
+  }
 }
 
 export async function loadLlcProject(path: string) {
@@ -193,12 +226,13 @@ export async function askForEdlImport({ type, fps, fileDuration, defaultPath }: 
   return readEdlFile({ type, path: firstFilePath, fps });
 }
 
-export async function exportEdlFile({ type, cutSegments, customOutDir, filePath, getFrameCount }: {
+export async function exportEdlFile({ type, cutSegments, customOutDir, filePath, getFrameCount, clipMetadata }: {
   type: EdlExportType,
   cutSegments: StateSegment[],
   customOutDir?: string | undefined,
   filePath?: string | undefined,
   getFrameCount: GetFrameCount,
+  clipMetadata?: ClipMetadata | undefined,
 }) {
   invariant(filePath != null);
 
@@ -252,6 +286,6 @@ export async function exportEdlFile({ type, cutSegments, customOutDir, filePath,
   else if (type === 'csv-frames') await saveCsvFrames({ path: savePath, cutSegments, getFrameCount });
   else if (type === 'llc') await saveLlcProject({ savePath, mediaFilePath: filePath, cutSegments });
   else if (type === 'srt') await saveSrt(savePath, cutSegments);
-  else if (type === 'resolve-marker-manifest') await saveResolveMarkerManifest({ savePath, mediaFilePath: filePath, cutSegments, getFrameCount });
+  else if (type === 'resolve-marker-manifest') await saveResolveMarkerManifest({ savePath, mediaFilePath: filePath, cutSegments, getFrameCount, clipMetadata });
   else if (type === 'resolve-marker-importer-script') await writeFile(savePath, formatResolveMarkerImporterScript());
 }

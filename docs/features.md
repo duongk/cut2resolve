@@ -33,7 +33,7 @@ Lossless cuts can only start at a keyframe, so a cut starts at the keyframe befo
 - Edit a segment's label directly in the segment list
 - Select and change segments with a JavaScript-based [expression language](expressions.md)
 - [Import](index.md#importexport-projects) segments from MP4/MKV chapters, CSV, EDL (MPlayer, CMX 3600), YouTube chapters, Cutlist, CUE, DaVinci Resolve/Final Cut Pro XML, FCPXML, PotPlayer bookmarks, SRT subtitles, OpenTimelineIO and DV Analyzer
-- Export segments as CSV, TSV/TXT, SRT subtitles, YouTube chapter timestamps or DaVinci Resolve Media Pool duration-marker sidecars
+- Export segments as CSV, TSV/TXT, SRT subtitles, YouTube chapter timestamps or DaVinci Resolve Media Pool duration-marker sidecars, with optional per-clip logging metadata stored alongside the source
 - Browse a chosen folder in a left-hand directory tree and open supported media files directly from it
 - Turn segments into chapters in an otherwise unmodified file ("Segments to chapters" export mode)
 - Segments are saved per file in a project file (`.llc`)

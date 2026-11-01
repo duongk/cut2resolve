@@ -21,7 +21,8 @@ import { useSegColors } from './contexts';
 import { getSegmentTags } from './segments';
 import TagEditor, { cancelTagEditOnEscape } from './components/TagEditor';
 import TextInput from './components/TextInput';
-import type { ContextMenuTemplate, DefiniteSegmentBase, FormatTimecode, GetFrameCount, InverseCutSegment, SegmentBase, SegmentColorIndex, SegmentTags, StateSegment } from './types';
+import Select from './components/Select';
+import type { ClipMetadata, ContextMenuTemplate, DefiniteSegmentBase, FormatTimecode, GetFrameCount, InverseCutSegment, SegmentBase, SegmentColorIndex, SegmentTags, StateSegment } from './types';
 import type { UseSegments } from './hooks/useSegments';
 import * as Dialog from './components/Dialog';
 import { DialogButton } from './components/Button';
@@ -361,6 +362,8 @@ function SegmentList({
   setEditingSegmentTagsSegmentIndex,
   onEditSegmentTags,
   getSegEstimatedSize,
+  clipMetadata,
+  setClipMetadata,
 }: {
   width: number,
   formatTimecode: FormatTimecode,
@@ -402,6 +405,8 @@ function SegmentList({
   setEditingSegmentTagsSegmentIndex: Dispatch<SetStateAction<number | undefined>>,
   onEditSegmentTags: (index: number) => void,
   getSegEstimatedSize: UseSegments['getSegEstimatedSize'],
+  clipMetadata: ClipMetadata,
+  setClipMetadata: Dispatch<SetStateAction<ClipMetadata>>,
 }) {
   const { t } = useTranslation();
   const { getSegColor, nextSegColorIndex } = useSegColors();
@@ -593,6 +598,12 @@ function SegmentList({
 
   const draggingSeg = useMemo(() => sortableList.find((s) => s.id === draggingId), [sortableList, draggingId]);
 
+  const updateMetadata = useCallback((update: Partial<ClipMetadata>) => {
+    setClipMetadata((current) => ({ ...current, ...update }));
+  }, [setClipMetadata]);
+
+  const commaSeparated = (value: string) => [...new Set(value.split(',').map((item) => item.trim()).filter(Boolean))];
+
   function renderSegment({ seg, index, selected, isActive, dragging }: {
     seg: StateSegment | InverseCutSegment,
     index: number,
@@ -667,59 +678,86 @@ function SegmentList({
         exit={{ x: width }}
         transition={springAnimation}
       >
-        <div style={{ padding: '.2em .5em', color: 'var(--gray-12)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '.2em' }} className="no-user-select">
-          <span style={{ fontSize: '.8em' }}>{getHeader()}</span>
-
-          <FaTimes
-            title={actionTitle(t('Close sidebar'), 'toggleSegmentsList')}
-            style={{ fontSize: '1.1em', verticalAlign: 'middle', color: 'var(--gray-11)', cursor: 'pointer', padding: '.2em .3em' }}
-            role="button"
-            onClick={toggleSegmentsList}
-          />
-        </div>
-
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} onDragStart={handleDragStart} modifiers={[restrictToVerticalAxis]}>
-          <SortableContext items={sortableList} strategy={verticalListSortingStrategy}>
-            <div ref={scrollerRef} style={{ padding: '0 .2em 0 .5em', overflowX: 'hidden', overflowY: 'scroll', flexGrow: 1 }} className="consistent-scrollbar">
-              <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative', overflow: 'hidden' }}>
-                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                  const { id, seg } = sortableList[virtualRow.index]!;
-                  const selected = 'selected' in seg ? seg.selected : true;
-                  const isActive = !invertCutSegments && currentSegIndex === virtualRow.index;
-
-                  return (
-                    <div
-                      key={id}
-                      data-index={virtualRow.index}
-                      ref={rowVirtualizer.measureElement}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        transform: `translateY(${virtualRow.start}px)`,
-                      }}
-                    >
-                      {renderSegment({ seg, index: virtualRow.index, selected, isActive })}
-                    </div>
-                  );
-                })}
+        <div style={{ flex: '1 1 50%', minHeight: 0, display: 'flex', flexDirection: 'column', borderBottom: '1px solid var(--gray-7)' }}>
+          <div style={{ padding: '.35em .5em .2em', color: 'var(--gray-12)', fontSize: '.8em' }} className="no-user-select">{t('Clip metadata')}</div>
+          <div style={{ padding: '0 .5em .5em', overflowY: 'auto', display: 'grid', gap: '.35em' }} className="consistent-scrollbar">
+            <div style={{ display: 'grid', gap: '.1em', fontSize: '.72em' }}>
+              <span>{t('Description')}</span>
+              <textarea value={clipMetadata.description ?? ''} onChange={(event) => updateMetadata({ description: event.target.value || undefined })} rows={3} style={{ resize: 'vertical', boxSizing: 'border-box', width: '100%', font: 'inherit', fontSize: '1.1em', borderRadius: '.4em', backgroundColor: 'var(--gray-3)', color: 'var(--gray-12)', border: '1px solid var(--gray-7)' }} />
+            </div>
+            <div style={{ display: 'grid', gap: '.1em', fontSize: '.72em' }}>
+              <span>{t('Projects')}</span>
+              <TextInput value={(clipMetadata.projects ?? []).join(', ')} placeholder={t('Comma-separated')} onChange={(event) => updateMetadata({ projects: commaSeparated(event.target.value) })} />
+            </div>
+            <div style={{ display: 'grid', gap: '.1em', fontSize: '.72em' }}>
+              <span>{t('Keywords')}</span>
+              <TextInput value={(clipMetadata.keywords ?? []).join(', ')} placeholder={t('Comma-separated')} onChange={(event) => updateMetadata({ keywords: commaSeparated(event.target.value) })} />
+            </div>
+            <div style={{ display: 'flex', gap: '.45em' }}>
+              <div style={{ display: 'grid', gap: '.1em', fontSize: '.72em', flex: 1 }}>
+                <span>{t('Rating')}</span>
+                <Select value={clipMetadata.rating ?? ''} onChange={(event) => updateMetadata({ rating: event.target.value === '' ? undefined : Number(event.target.value) })}>
+                  <option value="">{t('Unrated')}</option>
+                  {[1, 2, 3, 4, 5].map((rating) => <option key={rating} value={rating}>{rating}</option>)}
+                </Select>
+              </div>
+              <div style={{ display: 'grid', gap: '.1em', fontSize: '.72em', flex: 1 }}>
+                <span>{t('Status')}</span>
+                <Select value={clipMetadata.status ?? ''} onChange={(event) => updateMetadata({ status: event.target.value === '' ? undefined : event.target.value as ClipMetadata['status'] })}>
+                  <option value="">{t('Unreviewed')}</option>
+                  <option value="keep">{t('Keep')}</option>
+                  <option value="maybe">{t('Maybe')}</option>
+                  <option value="reject">{t('Reject')}</option>
+                </Select>
               </div>
             </div>
-          </SortableContext>
-
-          <DragOverlay>
-            {draggingSeg ? renderSegment({ seg: draggingSeg.seg, index: sortableList.indexOf(draggingSeg), dragging: true }) : null}
-          </DragOverlay>
-        </DndContext>
-
-        {isOnlyMarkers && (
-          <div style={{ padding: '1em .7em', color: 'var(--gray-11)', fontSize: '.85em' }}>
-            {t('Markers are segments without an end time and will not be exported. Convert markers to segments by setting their end time.')}
           </div>
-        )}
+        </div>
 
-        {renderFooter()}
+        <div style={{ flex: '1 1 50%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '.2em .5em', color: 'var(--gray-12)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '.2em' }} className="no-user-select">
+            <span style={{ fontSize: '.8em' }}>{getHeader()}</span>
+
+            <FaTimes
+              title={actionTitle(t('Close sidebar'), 'toggleSegmentsList')}
+              style={{ fontSize: '1.1em', verticalAlign: 'middle', color: 'var(--gray-11)', cursor: 'pointer', padding: '.2em .3em' }}
+              role="button"
+              onClick={toggleSegmentsList}
+            />
+          </div>
+
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} onDragStart={handleDragStart} modifiers={[restrictToVerticalAxis]}>
+            <SortableContext items={sortableList} strategy={verticalListSortingStrategy}>
+              <div ref={scrollerRef} style={{ padding: '0 .2em 0 .5em', overflowX: 'hidden', overflowY: 'scroll', flexGrow: 1 }} className="consistent-scrollbar">
+                <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative', overflow: 'hidden' }}>
+                  {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                    const { id, seg } = sortableList[virtualRow.index]!;
+                    const selected = 'selected' in seg ? seg.selected : true;
+                    const isActive = !invertCutSegments && currentSegIndex === virtualRow.index;
+
+                    return (
+                      <div key={id} data-index={virtualRow.index} ref={rowVirtualizer.measureElement} style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${virtualRow.start}px)` }}>
+                        {renderSegment({ seg, index: virtualRow.index, selected, isActive })}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </SortableContext>
+
+            <DragOverlay>
+              {draggingSeg ? renderSegment({ seg: draggingSeg.seg, index: sortableList.indexOf(draggingSeg), dragging: true }) : null}
+            </DragOverlay>
+          </DndContext>
+
+          {isOnlyMarkers && (
+            <div style={{ padding: '1em .7em', color: 'var(--gray-11)', fontSize: '.85em' }}>
+              {t('Markers are segments without an end time and will not be exported. Convert markers to segments by setting their end time.')}
+            </div>
+          )}
+
+          {renderFooter()}
+        </div>
       </motion.div>
     </>
   );

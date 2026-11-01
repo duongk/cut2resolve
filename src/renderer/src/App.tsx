@@ -68,7 +68,7 @@ import {
 } from './ffmpeg';
 import { shouldCopyStreamByDefault, getAudioStreams, getRealVideoStreams, isAudioDefinitelyNotSupported, willPlayerProperlyHandleVideo, doesPlayerSupportHevcPlayback, getSubtitleStreams, enableVideoTrack, enableAudioTrack, canHtml5PlayerPlayStreams, isMatroska } from './util/streams';
 import { needsHvc1Tag } from './util/metadata';
-import { exportEdlFile, readEdlFile, loadLlcProject, askForEdlImport } from './edlStore';
+import { exportEdlFile, readEdlFile, loadLlcProject, askForEdlImport, loadResolveMarkerManifestMetadata } from './edlStore';
 import { formatYouTube, getFrameCountRaw, formatTsvHuman } from './edlFormats';
 import {
   getOutPath, getOutDir,
@@ -101,7 +101,7 @@ import { generateCutFileNames as generateCutFileNamesRaw, generateCutMergedFileN
 import { rightBarWidth, leftBarWidth, ffmpegExtractWindow, zoomMax } from './util/constants';
 import BigWaveform from './components/BigWaveform';
 
-import type { BatchFile, Chapter, EdlExportType, EdlFileType, EdlImportType, FfmpegCommandLog, FilesMeta, FileStats, ParamsByFile, PlaybackMode, SegmentBase, SegmentColorIndex, SegmentTags, StateSegment, TunerType } from './types';
+import type { BatchFile, Chapter, ClipMetadata, EdlExportType, EdlFileType, EdlImportType, FfmpegCommandLog, FilesMeta, FileStats, ParamsByFile, PlaybackMode, SegmentBase, SegmentColorIndex, SegmentTags, StateSegment, TunerType } from './types';
 import { goToTimecodeDirectArgsSchema } from './types';
 import type { CaptureFormat, KeyboardAction, ApiActionRequest } from '../../common/types.js';
 import { openFilesActionArgsSchema } from '../../common/types.js';
@@ -152,6 +152,7 @@ function App() {
   const [progress, setProgress] = useState<number>();
   const [startTimeOffset, setStartTimeOffset] = useState(0);
   const [filePath, setFilePath] = useState<string>();
+  const [clipMetadata, setClipMetadata] = useState<ClipMetadata>({});
   const [fileDuration, setFileDuration] = useState<number>();
   const [externalFilesMeta, setExternalFilesMeta] = useState<FilesMeta>({});
   const [paramsByFile, setParamsByFile] = useState<ParamsByFile>(new Map());
@@ -365,7 +366,17 @@ function App() {
     cutSegments, cutSegmentsHistory, createSegmentsFromKeyframes, shuffleSegments, detectBlackScenes, detectSilentScenes, detectSceneChanges, removeSegment, invertAllSegments, fillSegmentsGaps, combineOverlappingSegments, combineSelectedSegments, modifySelectedSegmentTimes, alignSegmentTimesToKeyframes, updateSegOrder, updateSegOrders, reorderSegsByStartTime, addSegment, setCutStart, setCutEnd, labelSegment, splitCurrentSegment, focusSegmentAtCursor, selectSegmentsAtCursor, createNumSegments, createFixedDurationSegments, createFixedByteSizedSegments, createRandomSegments, getSegEstimatedSize, haveInvalidSegs, currentSegIndexSafe, currentCutSeg, inverseCutSegments, clearSegments, clearSegColorCounter, loadCutSegments, setCutTime, setCurrentSegIndex, labelSelectedSegments, deselectAllSegments, selectAllSegments, selectOnlyCurrentSegment, toggleCurrentSegmentSelected, invertSelectedSegments, removeSelectedSegments, selectSegmentsByLabel, selectSegmentsByExpr, selectAllMarkers, mutateSegmentsByExpr, toggleSegmentSelected, selectOnlySegment, selectedSegments, segmentsOrInverse, segmentsToExport, duplicateCurrentSegment, duplicateSegment, updateSegAtIndex, findSegmentsAtCursor, maybeCreateFullLengthSegment, currentCutSegOrWholeTimeline, segColorCounter,
   } = useSegments({ filePath, workingRef, setWorking, setProgress, videoStream: activeVideoStream, fileDuration, getRelevantTime, maxLabelLength, checkFileOpened, invertCutSegments, segmentsToChaptersOnly, timecodePlaceholder, parseTimecode, appendFfmpegCommandLog, fileDurationNonZero, mainFileMeta: mainFileMeta?.ffprobeMeta, seekAbs, activeVideoStreamIndex, activeAudioStreamIndexes, handleError, showGenericDialog, simpleMode, ffmpegHwaccel });
 
-  const { getEdlFilePath, projectFileSavePath, getProjectFileSavePath } = useSegmentsAutoSave({ autoSaveProjectFile, storeProjectInWorkingDir, filePath, customOutDir, cutSegments, getFrameCount });
+  useEffect(() => {
+    let cancelled = false;
+    async function loadMetadata() {
+      const metadata = filePath == null ? {} : await loadResolveMarkerManifestMetadata(filePath);
+      if (!cancelled) setClipMetadata(metadata);
+    }
+    loadMetadata().catch((error: unknown) => console.warn('Unable to load clip metadata', error));
+    return () => { cancelled = true; };
+  }, [filePath]);
+
+  const { getEdlFilePath, projectFileSavePath, getProjectFileSavePath } = useSegmentsAutoSave({ autoSaveProjectFile, storeProjectInWorkingDir, filePath, customOutDir, cutSegments, getFrameCount, clipMetadata });
 
   const { nonCopiedExtraStreams, exportExtraStreams, mainCopiedThumbnailStreams, numStreamsToCopy, toggleStripVideo, toggleStripAudio, toggleStripSubtitle, toggleStripThumbnail, toggleStripAll, copyStreamIdsByFile, setCopyStreamIdsByFile, copyFileStreams, mainCopiedStreams, setCopyStreamIdsForPath, toggleCopyStreamId, isCopyingStreamId, toggleCopyStreamIds, changeEnabledStreamsFilter, applyEnabledStreamsFilter, enabledStreamsFilter, toggleCopyAllStreamsForPath } = useStreamsMeta({ mainStreams, externalFilesMeta, filePath, autoExportExtraStreams, showGenericDialog });
 
@@ -2351,9 +2362,9 @@ function App() {
   const tryExportEdlFile = useCallback(async (type: EdlExportType) => {
     if (!checkFileOpened() || selectedSegments.length === 0) return;
     await withErrorHandling(async () => {
-      await exportEdlFile({ type, cutSegments: selectedSegments, customOutDir, filePath, getFrameCount });
+      await exportEdlFile({ type, cutSegments: selectedSegments, customOutDir, filePath, getFrameCount, clipMetadata });
     }, i18n.t('Failed to export project'));
-  }, [checkFileOpened, customOutDir, filePath, getFrameCount, selectedSegments, withErrorHandling]);
+  }, [checkFileOpened, clipMetadata, customOutDir, filePath, getFrameCount, selectedSegments, withErrorHandling]);
 
   const importEdlFile = useCallback(async (type: EdlImportType) => {
     if (!checkFileOpened()) return;
@@ -2709,6 +2720,8 @@ function App() {
                         setEditingSegmentTagsSegmentIndex={setEditingSegmentTagsSegmentIndex}
                         onEditSegmentTags={onEditSegmentTags}
                         getSegEstimatedSize={getSegEstimatedSize}
+                        clipMetadata={clipMetadata}
+                        setClipMetadata={setClipMetadata}
                       />
                     )}
                   </AnimatePresence>

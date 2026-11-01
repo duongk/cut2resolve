@@ -239,6 +239,7 @@ it('parses fcpxml with single asset-clip, whole second times and missing start',
 it('formats a portable Resolve marker sidecar', () => {
   const manifest = JSON.parse(formatResolveMarkerManifest({
     mediaFilePath: '/Volumes/Video Library/2026/10/C0001.MP4',
+    clipMetadata: { description: 'Golden hour', projects: ['Deck renovation'], keywords: ['deck', 'drill'], rating: 4, status: 'keep' },
     cutSegments: [
       { start: 1, end: 2.5, name: 'Walking shot', tags: { rating: '4', keyword: 'nature' } },
       { start: 4, name: 'Point marker' },
@@ -249,6 +250,7 @@ it('formats a portable Resolve marker sidecar', () => {
   expect(manifest).toStrictEqual({
     version: 1,
     sourceFileName: 'C0001.MP4',
+    metadata: { description: 'Golden hour', projects: ['Deck renovation'], keywords: ['deck', 'drill'], rating: 4, status: 'keep' },
     markers: [{ frame: 24, duration: 36, name: 'Walking shot', note: 'rating: 4\nkeyword: nature' }],
   });
 });

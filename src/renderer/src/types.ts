@@ -21,6 +21,19 @@ export const segmentTagsSchema = z.record(z.string(), z.string());
 
 export type SegmentTags = z.infer<typeof segmentTagsSchema>;
 
+/**
+ * Optional logging metadata stored with a source clip's Resolve marker sidecar.
+ * This deliberately stays separate from embedded media metadata: exporting ranges
+ * must never modify the camera original.
+ */
+export interface ClipMetadata {
+  description?: string | undefined,
+  projects?: string[] | undefined,
+  keywords?: string[] | undefined,
+  rating?: number | undefined,
+  status?: 'keep' | 'maybe' | 'reject' | 'unreviewed' | undefined,
+}
+
 export type EditingSegmentTags = Record<string, SegmentTags>;
 
 // todo remove some time in the future

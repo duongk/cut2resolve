@@ -11,7 +11,7 @@ import { z } from 'zod';
 
 import { formatDuration } from './util/duration';
 import { invertSegments, sortSegments } from './segments';
-import type { GetFrameCount, SegmentBase, SegmentTags } from './types';
+import type { ClipMetadata, GetFrameCount, SegmentBase, SegmentTags } from './types';
 import parseCmx3600 from './cmx3600';
 import { UserFacingError } from '../errors';
 
@@ -19,10 +19,11 @@ import { UserFacingError } from '../errors';
 export const getTimeFromFrameNum = (detectedFps: number, frameNum: number) => frameNum / detectedFps;
 
 /** A portable per-source sidecar, read by the one reusable Resolve importer script. */
-export function formatResolveMarkerManifest({ mediaFilePath, cutSegments, getFrameCount }: {
+export function formatResolveMarkerManifest({ mediaFilePath, cutSegments, getFrameCount, clipMetadata }: {
   mediaFilePath: string,
   cutSegments: (SegmentBase & { tags?: SegmentTags | undefined })[],
   getFrameCount: GetFrameCount,
+  clipMetadata?: ClipMetadata | undefined,
 }) {
   const markers = cutSegments.flatMap(({ start, end, name, tags }) => {
     if (end == null) return [];
@@ -41,6 +42,7 @@ export function formatResolveMarkerManifest({ mediaFilePath, cutSegments, getFra
   return `${JSON.stringify({
     version: 1,
     sourceFileName: mediaFilePath.replace(/^.*[\\/]/, ''),
+    ...(clipMetadata != null && Object.keys(clipMetadata).length > 0 && { metadata: clipMetadata }),
     markers,
   }, null, 2)}\n`;
 }
