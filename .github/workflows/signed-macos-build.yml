@@ -71,7 +71,9 @@ jobs:
 
       - name: Verify signed and notarized deliverables
         run: |
-          find dist -type d -name '*.app' -print0 | while IFS= read -r -d '' app; do
+          # A notarization ticket is stapled to the distributable app, not to
+          # Electron's nested helper apps. codesign --deep verifies those helpers.
+          find dist -path '*/mac/*.app' -type d -print0 | while IFS= read -r -d '' app; do
             codesign --verify --deep --strict --verbose=2 "$app"
             xcrun stapler validate "$app"
           done
