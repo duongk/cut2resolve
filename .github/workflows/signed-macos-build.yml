@@ -54,12 +54,26 @@ jobs:
       - run: yarn build
 
       - name: Package, sign, and notarize macOS DMGs
+        # electron-builder notarizes and staples the .app inside each DMG.
+        # The finished DMG is a separate distributable and needs its own ticket.
         run: yarn electron-builder --mac dmg --x64 --arm64 --publish never
+
+      - name: Notarize and staple final DMGs
+        run: |
+          find dist -type f -name '*.dmg' -print0 | while IFS= read -r -d '' dmg; do
+            xcrun notarytool submit "$dmg" \
+              --key "$APPLE_API_KEY" \
+              --key-id "$APPLE_API_KEY_ID" \
+              --issuer "$APPLE_API_ISSUER" \
+              --wait
+            xcrun stapler staple -v "$dmg"
+          done
 
       - name: Verify signed and notarized deliverables
         run: |
           find dist -type d -name '*.app' -print0 | while IFS= read -r -d '' app; do
             codesign --verify --deep --strict --verbose=2 "$app"
+            xcrun stapler validate "$app"
           done
           find dist -type f -name '*.dmg' -print0 | while IFS= read -r -d '' dmg; do
             xcrun stapler validate "$dmg"
