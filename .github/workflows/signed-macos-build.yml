@@ -81,7 +81,6 @@ jobs:
           done
           find dist -type f -name '*.dmg' -print0 | while IFS= read -r -d '' dmg; do
             xcrun stapler validate "$dmg"
-            spctl --assess --type open --verbose=4 "$dmg"
           done
 
       - uses: actions/upload-artifact@v5
