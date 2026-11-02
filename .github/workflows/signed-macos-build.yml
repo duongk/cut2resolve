@@ -73,7 +73,9 @@ jobs:
         run: |
           # A notarization ticket is stapled to the distributable app, not to
           # Electron's nested helper apps. codesign --deep verifies those helpers.
-          find dist -path '*/mac/*.app' -type d -print0 | while IFS= read -r -d '' app; do
+          # The architecture build directories are direct children of dist;
+          # nested Electron helper apps are much deeper.
+          find dist -mindepth 2 -maxdepth 2 -type d -name '*.app' -print0 | while IFS= read -r -d '' app; do
             codesign --verify --deep --strict --verbose=2 "$app"
             xcrun stapler validate "$app"
           done
