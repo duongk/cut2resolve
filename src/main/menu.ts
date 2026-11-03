@@ -4,8 +4,7 @@ import electron from 'electron';
 import { t } from 'i18next';
 import { join } from 'node:path';
 
-//import { homepageUrl, getReleaseUrl, licensesUrl, thanksUrl, usageUrl, faqUrl, troubleshootingUrl, featureRequestUrl, githubUrl } from '../common/constants.js';
-import { getReleaseUrl, licensesUrl, githubUrl } from '../common/constants.js';
+import { donateUrl, getReleaseUrl, licensesUrl, githubUrl } from '../common/constants.js';
 import { logFilePath } from './logger.js';
 import { getConfigPath } from './configStore.js';
 
@@ -456,26 +455,10 @@ export default ({ app, mainWindow, newVersion, isStoreBuild, openExternal }: {
       label: esc(t('Help')),
       submenu: [
         {
-          label: esc(t('How to use')),
-          click() { openExternal(usageUrl); },
-        },
-        {
-          label: esc(t('FAQ')),
-          click() { openExternal(faqUrl); },
-        },
-        {
-          label: esc(t('Troubleshooting')),
-          click() { openExternal(troubleshootingUrl); },
-        },
-        {
           label: esc(t('Keyboard & mouse shortcuts')),
           click() {
             mainWindow.webContents.send('toggleKeyboardShortcuts');
           },
-        },
-        {
-          label: esc(t('Learn More')),
-          click() { openExternal(homepageUrl); },
         },
         { type: 'separator' },
         {
@@ -483,13 +466,9 @@ export default ({ app, mainWindow, newVersion, isStoreBuild, openExternal }: {
           click() { mainWindow.webContents.send('openSendReportDialog'); },
         },
         {
-          label: esc(t('Feature request')),
-          click() { openExternal(featureRequestUrl); },
-        },
-        ...(!isStoreBuild ? [{
           label: esc(`${t('Donate')} ❤️`),
-          click() { openExternal(thanksUrl); },
-        }] : []),
+          click() { openExternal(donateUrl); },
+        },
         { type: 'separator' },
         {
           label: esc(t('Configuration file')),
