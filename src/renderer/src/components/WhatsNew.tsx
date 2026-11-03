@@ -40,7 +40,7 @@ export default function WhatsNew() {
         <Dialog.Overlay />
         <Dialog.Content style={{ width: '60em' }} aria-describedby={undefined}>
           <Dialog.Title>
-            {t('What\'s new in LosslessCut?')}
+            {t('What\'s new in Cut2Resolve?')}
           </Dialog.Title>
 
           <div>
