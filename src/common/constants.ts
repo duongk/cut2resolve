@@ -8,7 +8,7 @@ export const getReleaseUrl = (version: string) => `${githubUrl}/releases/tag/v${
 export const compareReleasesUrl = (fromVersion: string, toVersion: string) => `${githubUrl}/compare/v${fromVersion}...v${toVersion}`;
 export const licensesUrl = getAppLinkUrl('licenses');
 export const thanksUrl = getAppLinkUrl('thanks');
-export const donateUrl = 'https://buymeacoffee.com/lifeeverydayfilms';
+export const donateUrl = 'https://duongk.github.io/cut2resolve/';
 export const discussionsUrl = getAppLinkUrl('discussions');
 export const discordUrl = getAppLinkUrl('discord');
 // Link to losslesscut.app pages (and anything that may move) only through websiteUrls.ts, see the rules there.
