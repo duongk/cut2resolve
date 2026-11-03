@@ -4,7 +4,8 @@ import electron from 'electron';
 import { t } from 'i18next';
 import { join } from 'node:path';
 
-import { homepageUrl, getReleaseUrl, licensesUrl, thanksUrl, usageUrl, faqUrl, troubleshootingUrl, featureRequestUrl, githubUrl } from '../common/constants.js';
+//import { homepageUrl, getReleaseUrl, licensesUrl, thanksUrl, usageUrl, faqUrl, troubleshootingUrl, featureRequestUrl, githubUrl } from '../common/constants.js';
+import { getReleaseUrl, licensesUrl, githubUrl } from '../common/constants.js';
 import { logFilePath } from './logger.js';
 import { getConfigPath } from './configStore.js';
 
