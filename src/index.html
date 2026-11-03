@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support My Work</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="glass-card rounded-3xl max-w-md w-full p-8 text-center transition-transform hover:-translate-y-1 duration-300">
+        
+        <!-- Profile Image -->
+        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Kiet" alt="Profile Image" class="w-28 h-28 mx-auto rounded-full mb-6 border-4 border-slate-800 shadow-xl object-cover">
+        
+        <h1 class="text-3xl font-bold mb-1 tracking-tight">Kiet Anh Duong</h1>
+        <p class="text-xs text-yellow-400 mb-6 uppercase tracking-widest font-semibold">Creator & Developer</p>
+        
+        <p class="text-slate-300 mb-8 leading-relaxed text-sm">
+            If you find my YouTube tutorials helpful or use my open-source projects like Cut2Resolve, consider buying me a coffee to fuel the next build!
+        </p>
+
+        <!-- Buy Me a Coffee Button -->
+        <a href="https://www.buymeacoffee.com/yourusername" target="_blank" rel="noopener noreferrer" 
+           class="inline-flex items-center justify-center bg-[#FFDD00] text-slate-900 font-bold text-lg py-3 px-8 rounded-full hover:bg-[#ffea4d] hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,221,0,0.3)] w-full">
+            <img src="https://cdn.buymeacoffee.com/buttons/bmc-new-btn-logo.svg" alt="Buy me a coffee" class="w-6 h-6 mr-3">
+            Buy me a coffee
+        </a>
+        
+    </div>
+
+</body>
+</html>
