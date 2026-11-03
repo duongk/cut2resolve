@@ -1,6 +1,6 @@
 [
   {
-    "version": "0.1.0",
+    "version": "0.1.0-beta.1",
     "highlightsMd": "## Cut2Resolve\n\n- 🆕 Add a DaVinci Resolve marker workflow: named ranges become Media Pool duration markers while original media remains unchanged\n- 🆕 Add segment notes and keywords, plus clip metadata sidecars for Resolve imports\n- 🆕 Install the universal `cut2resolve import.py` script directly from **File → Export project**; no administrator rights are required\n- 🆕 Browse Home and mounted drives, resize the browser and metadata panes, and move or send related camera assets to Trash together\n- 🆕 Select 1×, 1.2×, 1.5×, or 2× preview playback speed from the bottom bar\n- Preserve `Proxy` folders and sidecars when managing camera media\n"
   },
   {
