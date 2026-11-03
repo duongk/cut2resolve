@@ -1,0 +1,45 @@
+name: Windows portable executable build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows x64 portable executable
+    runs-on: windows-2022
+    timeout-minutes: 45
+    env:
+      # This is a test/distribution build without a Windows code-signing certificate.
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --immutable --network-timeout 1000000
+
+      - name: Download bundled FFmpeg
+        run: yarn download-ffmpeg-win32-x64
+
+      - name: Build application
+        run: yarn build
+
+      - name: Package portable executable
+        # The portable target is a self-contained .exe; it does not install files
+        # or require administrator rights.
+        run: yarn electron-builder --win portable --x64 --publish never
+
+      - name: Upload portable executable
+        uses: actions/upload-artifact@v5
+        with:
+          name: cut2resolve-windows-x64-portable
+          path: dist/cut2resolve-win-x64.exe
+          if-no-files-found: error
