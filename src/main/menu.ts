@@ -2,6 +2,7 @@ import type { BrowserWindow, MenuItem, MenuItemConstructorOptions } from 'electr
 // eslint-disable-next-line import-js/no-extraneous-dependencies
 import electron from 'electron';
 import { t } from 'i18next';
+import { join } from 'node:path';
 
 import { homepageUrl, getReleaseUrl, licensesUrl, thanksUrl, usageUrl, faqUrl, troubleshootingUrl, featureRequestUrl, githubUrl } from '../common/constants.js';
 import { logFilePath } from './logger.js';
@@ -504,7 +505,10 @@ export default ({ app, mainWindow, newVersion, isStoreBuild, openExternal }: {
         },
         {
           label: esc(t('Licenses')),
-          click() { openExternal(licensesUrl); },
+          click() {
+            if (app.isPackaged) electron.shell.openPath(join(process.resourcesPath, 'legal', 'licenses.txt'));
+            else openExternal(licensesUrl);
+          },
         },
         ...(process.platform !== 'darwin' ? [{
           role: 'about' as const,

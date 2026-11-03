@@ -11,8 +11,8 @@ import debounce from 'lodash/debounce.js';
 import yargsParser from 'yargs-parser';
 import JSON5 from 'json5';
 import remote from '@electron/remote/main/index.js';
-import { copyFile, lstat, mkdir, readFile, rename, stat, unlink } from 'node:fs/promises';
-import { join, parse } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import assert from 'node:assert';
 import timers from 'node:timers/promises';
 import { z } from 'zod';
@@ -42,6 +42,7 @@ import * as ffmpeg from './ffmpeg.js';
 import * as compatPlayer from './compatPlayer.js';
 import { downloadMediaUrl } from './ffmpeg.js';
 import { hasDisabledNetworking, setDisableNetworking } from './networking.js';
+import { moveToLocalTrash } from './trash.js';
 
 
 electronUnhandled({ showDialog: true, logger: (err) => logger.error('electron-unhandled', err) });
@@ -375,33 +376,7 @@ async function init() {
 
     ipcMain.on('setLanguage', (_e, newLanguage) => changeLanguage(newLanguage));
 
-    ipcMain.handle('tryTrashItem', async (_e, { path, fallbackPath }: { path: string, fallbackPath?: string | undefined }) => {
-      try {
-        await stat(path);
-      } catch (err) {
-        if (err instanceof Error && 'code' in err && err.code === 'ENOENT') return;
-      }
-      try {
-        await shell.trashItem(path);
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (fallbackPath == null || !/does(?:n't|n’t| not) have one/i.test(message)) throw error;
-
-        const { dir, name, ext } = parse(fallbackPath);
-        await mkdir(dir, { recursive: true });
-        let availablePath = fallbackPath;
-        for (let suffix = 1; await lstat(availablePath).then(() => true).catch(() => false); suffix += 1) {
-          availablePath = join(dir, `${name}-${suffix}${ext}`);
-        }
-        try {
-          await rename(path, availablePath);
-        } catch (moveError: unknown) {
-          if ((moveError as NodeJS.ErrnoException).code !== 'EXDEV') throw moveError;
-          await copyFile(path, availablePath);
-          await unlink(path);
-        }
-      }
-    });
+    ipcMain.handle('tryTrashItem', async (_e, { path, fallbackPath }: { path: string, fallbackPath?: string | undefined }) => moveToLocalTrash(path, fallbackPath));
 
     ipcMain.handle('showItemInFolder', (_e, path) => shell.showItemInFolder(path));
 

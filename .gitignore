@@ -16,6 +16,7 @@ node_modules
 /build-resources
 /notes
 /ffmpeg
+/licenses.txt
 /app*.log
 /main-ts-dist
 /preload-ts-dist

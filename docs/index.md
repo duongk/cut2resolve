@@ -68,7 +68,7 @@ Same as CSV but `<tab>` instead.
 
 1. Once, use **File → Export project → Install DaVinci Resolve importer**. It installs `cut2resolve import.py` in Resolve's user script folder and opens that folder for you. Restart Resolve or refresh its Scripts menu:
    - macOS: `~/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/Scripts/Utility/`
-   - Windows: `%AppData%\Blackmagic Design\DaVinci Resolve\Fusion\Scripts\Utility\`
+   - Windows: `%APPDATA%\Blackmagic Design\DaVinci Resolve\Support\Fusion\Scripts\Utility\`
 2. With **Auto save project file** enabled in Settings, LosslessCut automatically writes and updates each marker sidecar beside its original file after range changes. The Clip metadata panel above Segments to export stores its description, projects, keywords, rating and status in the same sidecar; it never changes the camera original. Keep the sidecar with the source when moving or copying media. You can also export one manually.
 3. In Resolve, import the original source clips into the Media Pool. Do not import a proxy in their place.
 4. Run the one importer from **Workspace → Scripts → Utility**. It processes every imported original that has its adjacent sidecar.

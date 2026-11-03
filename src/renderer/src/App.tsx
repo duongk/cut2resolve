@@ -646,7 +646,7 @@ function App() {
   const isEncoding = needSmartCut || lossyMode != null;
 
   const {
-    concatFiles, html5ifyDummy, cutMultiple, concatCutSegments, html5ify, fixInvalidDuration, decimate, extractStreams, tryDeleteFiles,
+    concatFiles, html5ifyDummy, cutMultiple, concatCutSegments, html5ify, fixInvalidDuration, decimate, extractStreams, tryTrashFiles,
   } = useFfmpegOperations({ filePath, treatInputFileModifiedTimeAsStart, treatOutputFileModifiedTimeAsStart, isEncoding, lossyMode, enableOverwriteOutput, outputPlaybackRate, cutFromAdjustmentFrames, cutToAdjustmentFrames, appendLastCommandsLog, encCustomBitrate: encBitrate, appendFfmpegCommandLog, ffmpegHwaccel });
 
   const { previewFilePath, setPreviewFilePath, usingDummyVideo, setUsingDummyVideo, userHtml5ifyCurrentFile, convertFormatBatch, html5ifyAndLoadWithPreferences } = useHtml5ify({
@@ -1084,7 +1084,7 @@ function App() {
       if (cleanupChoices2.trashProjectFile && savedPaths.projectFilePath) pathsToDelete.push(savedPaths.projectFilePath);
       if (cleanupChoices2.trashSourceFile && savedPaths.sourceFilePath) pathsToDelete.push(savedPaths.sourceFilePath);
 
-      await deleteFiles({ paths: pathsToDelete, deleteIfTrashFails: cleanupChoices2.deleteIfTrashFails, signal: abortController.signal });
+      await deleteFiles({ paths: pathsToDelete, signal: abortController.signal });
     }, i18n.t('Unable to delete file'));
   }, [batchListRemoveFile, clearSegments, filePath, previewFilePath, projectFileSavePath, resetState, setWorking, withErrorHandling]);
 
@@ -1226,7 +1226,7 @@ function App() {
 
         // don't delete existing files that were not created by losslesscut now (due to overwrite disabled) https://github.com/mifi/lossless-cut/issues/2436
         const createdOutFiles = outFiles.flatMap((f) => (f.created ? [f.path] : []));
-        if (autoDeleteMergedSegments) await tryDeleteFiles(createdOutFiles);
+        if (autoDeleteMergedSegments) await tryTrashFiles(createdOutFiles);
       }
 
       if (!enableOverwriteOutput) warnings.add(i18n.t('Overwrite output setting is disabled and some files might have been skipped.'));
@@ -1311,7 +1311,7 @@ function App() {
       setWorking(undefined);
       setProgress(undefined);
     }
-  }, [filePath, numStreamsToCopy, haveInvalidSegs, workingRef, setWorking, segmentsToChaptersOnly, cutFileTemplateOrDefault, generateCutFileNames, cutMultiple, outputDir, customOutDir, fileFormat, fileDuration, isRotationSet, effectiveRotation, copyFileStreams, allFilesMeta, keyframeCut, segmentsToExport, shortestFlag, ffmpegExperimental, preserveMetadata, preserveMetadataOnMerge, preserveMovData, preserveChapters, movFastStart, avoidNegativeTs, paramsByFile, detectedFps, willMerge, enableOverwriteOutput, exportConfirmEnabled, mainFileFormat, mainStreams, exportExtraStreams, areWeCutting, simpleMode, prefersReducedMotion, cleanupChoices, hideAllNotifications, segmentsOrInverse.selected, t, cutMergedFileTemplateOrDefault, segmentsToChapters, invertCutSegments, generateCutMergedFileNames, concatCutSegments, autoDeleteMergedSegments, tryDeleteFiles, nonCopiedExtraStreams, extractStreams, askForCleanupChoices, cleanupFiles, showOsNotification, openCutFinishedDialog, handleExportFailed]);
+  }, [filePath, numStreamsToCopy, haveInvalidSegs, workingRef, setWorking, segmentsToChaptersOnly, cutFileTemplateOrDefault, generateCutFileNames, cutMultiple, outputDir, customOutDir, fileFormat, fileDuration, isRotationSet, effectiveRotation, copyFileStreams, allFilesMeta, keyframeCut, segmentsToExport, shortestFlag, ffmpegExperimental, preserveMetadata, preserveMetadataOnMerge, preserveMovData, preserveChapters, movFastStart, avoidNegativeTs, paramsByFile, detectedFps, willMerge, enableOverwriteOutput, exportConfirmEnabled, mainFileFormat, mainStreams, exportExtraStreams, areWeCutting, simpleMode, prefersReducedMotion, cleanupChoices, hideAllNotifications, segmentsOrInverse.selected, t, cutMergedFileTemplateOrDefault, segmentsToChapters, invertCutSegments, generateCutMergedFileNames, concatCutSegments, autoDeleteMergedSegments, tryTrashFiles, nonCopiedExtraStreams, extractStreams, askForCleanupChoices, cleanupFiles, showOsNotification, openCutFinishedDialog, handleExportFailed]);
 
   const onExportPress = useCallback(async () => {
     if (!filePath) return;
@@ -2101,7 +2101,7 @@ function App() {
       const { isConfirmed } = await getSwal().Swal.fire({
         icon: 'warning',
         title: t('Move {{count}} related camera files to Trash?', { count: relatedPaths.length }),
-        text: `${t('They will be moved to your system Trash and can be restored there. On a volume without a system Trash, they will be moved to a Trash folder instead.')}\n\n${relatedPaths.map((relatedPath) => relative(dirname(path), relatedPath)).join('\n')}`,
+        text: `${t('They will be moved to a Trash folder beside the source files. You can restore them by moving them back.')}\n\n${relatedPaths.map((relatedPath) => relative(dirname(path), relatedPath)).join('\n')}`,
         confirmButtonText: t('Move to Trash'),
         showCancelButton: true,
       });
@@ -2110,9 +2110,12 @@ function App() {
       setWorking({ text: t('Moving related camera files to Trash') });
       try {
         const sourceFolder = dirname(path);
-        await Promise.all(relatedPaths.map((relatedPath) => trashFile(relatedPath, pathJoin(sourceFolder, 'Trash', relative(sourceFolder, relatedPath)))));
-        setFolderBrowserRefreshKey((value) => value + 1);
+        for (const relatedPath of relatedPaths) {
+          // eslint-disable-next-line no-await-in-loop -- Stop the group immediately if a move fails.
+          await trashFile(relatedPath, pathJoin(sourceFolder, 'Trash', relative(sourceFolder, relatedPath)));
+        }
       } finally {
+        setFolderBrowserRefreshKey((value) => value + 1);
         setWorking(undefined);
       }
     }, action === 'moveRelatedFiles' ? t('Failed to move related camera files') : t('Failed to move related camera files to Trash'));
@@ -2744,7 +2747,8 @@ function App() {
                   <AnimatePresence>
                     {folderPath != null ? (
                       <FolderTree
-                        key={folderBrowserRefreshKey}
+                        key={folderPath}
+                        refreshVersion={folderBrowserRefreshKey}
                         folderPath={folderPath}
                         selectedPath={filePath}
                         width={leftPaneWidth}

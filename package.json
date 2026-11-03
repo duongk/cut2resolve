@@ -30,7 +30,7 @@
     "pack-linux": "yarn build && electron-builder --linux",
     "scan-i18n": "i18next-cli -c i18next.config.scan.ts extract",
     "generate-icon": "mkdirp icon-build build-resources/appx && node script/generateIcon.ts",
-    "generate-licenses": "yarn licenses generate-disclaimer -R > licenses.txt && echo '\n\nffmpeg is licensed under GPL v2+:\n\nhttp://www.gnu.org/licenses/old-licenses/gpl-2.0.html' >> licenses.txt",
+    "generate-licenses": "node script/prepareDistribution.ts --generate",
     "generate-docs": "node script/generateDocs.ts",
     "release-notes": "node script/releaseNotes.ts",
     "check-licenses": "node script/checkLicenses.ts",
@@ -170,9 +170,14 @@
       "onlyLoadAppFromAsar": true
     },
     "appId": "io.github.duongk.cut2resolve",
+    "beforePack": "./script/prepareDistribution.ts",
     "afterPack": "./script/afterPack.ts",
     "artifactName": "${productName}-${os}-${arch}.${ext}",
     "extraResources": [
+      {
+        "from": "dist/distribution-notices",
+        "to": "legal"
+      },
       {
         "from": "locales",
         "to": "locales"

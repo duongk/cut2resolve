@@ -51,7 +51,9 @@ cut2resolve is licensed under the **GNU General Public License, version 2 only**
 
 It contains code from LosslessCut by Mikael Finstad and other contributors. The original project is available at <https://github.com/mifi/lossless-cut>. The full attribution and modification notice is in [NOTICE](NOTICE).
 
-FFmpeg and other dependencies are distributed under their own licenses. Release builds include a generated `licenses.txt` file listing bundled package notices.
+FFmpeg and other dependencies are distributed under their own licenses. Packaged builds include `LICENSE`, `NOTICE`, generated `licenses.txt`, and `SOURCE.md` in their resources `legal` folder. **Help → Licenses** opens the bundled dependency notices offline.
+
+Public releases provide matching application source and corresponding source for bundled FFmpeg builds alongside binary downloads. See the [distribution checklist](docs/distribution.md) for the source archives and provenance records required before publication.
 
 ## Contributing and support
 

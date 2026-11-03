@@ -130,6 +130,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.github_token }}
 
+      - name: (Linux) Attach matching application source to the release
+        if: runner.os == 'Linux' && env.is_tag == 'true'
+        run: |
+          git diff --exit-code HEAD
+          git archive --format=zip --prefix=cut2resolve-source/ --output=dist/cut2resolve-source-${{ github.sha }}.zip HEAD
+          gh release upload "$GITHUB_REF_NAME" dist/cut2resolve-source-${{ github.sha }}.zip --clobber
+        env:
+          GH_TOKEN: ${{ secrets.github_token }}
+
       - name: Build for Windows x64
         if: runner.os == 'Windows' && runner.arch == 'X64'
         run: yarn electron-builder --publish onTag --win --x64

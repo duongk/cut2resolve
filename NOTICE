@@ -34,6 +34,8 @@ Third-party components
 
 cut2resolve includes FFmpeg and other dependencies, each under its applicable
 license. The exact notices for bundled dependencies are generated into
-licenses.txt for release artifacts. In particular, the license that applies to
-the bundled FFmpeg build depends on that build's configuration; consult its
-included notice before redistribution.
+legal/licenses.txt inside packaged builds. The legal folder also includes this
+NOTICE, LICENSE, and SOURCE.md with build provenance and source-distribution
+instructions. The license that applies to the bundled FFmpeg build depends on
+its configuration; consult its included notice and docs/distribution.md before
+redistribution.

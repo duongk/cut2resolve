@@ -29,6 +29,8 @@ The branches `stores/apple` and `stores/microsoft` point to the version that's c
 
 ## Release built version
 
+- Complete [the distribution and corresponding-source checklist](docs/distribution.md) before publishing. Verify packaged legal notices and matching application/FFmpeg source downloads; signing alone is insufficient.
+
 - Optionally, install the Mac App Store build from TestFlight (it shows up in App Store Connect after processing) and check that it starts and can open and export a file. This catches problems that only happen in the sandboxed MAS build.
 - Open draft in GitHub and add the prepared release notes. For a patch release, end them with `See [x.y.0](https://github.com/mifi/lossless-cut/releases/tag/vx.y.0) for the full list of changes.`
   - Agents can't create, edit or publish GitHub releases from a Claude Code session (the API refuses it), so the maintainer pastes the notes and publishes.

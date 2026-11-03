@@ -7,10 +7,9 @@ import { basename, join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { execa } from 'execa';
+import { macRelease, windowsLinuxRelease } from './ffmpegReleases.ts';
 
-// Bump these when upgrading FFmpeg. This is also the minimum supported FFmpeg version (see `customFfPath` in src/main/ffmpeg.ts)
-const macRelease = '9.0.2-1'; // https://github.com/mifi/ffmpeg-build-script/releases
-const windowsLinuxRelease = '9.0-2'; // https://github.com/mifi/ffmpeg-builds/releases (mirrors BtbN's n<branch>-latest builds)
+// ffmpegReleases.ts pins the bundled/minimum supported FFmpeg versions.
 
 const target = process.argv[2];
 const btbnTargets: Record<string, string> = { 'linux-x64': 'linux64', 'linux-arm64': 'linuxarm64', 'win32-x64': 'win64', 'win32-arm64': 'winarm64' };

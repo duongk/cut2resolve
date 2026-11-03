@@ -4,7 +4,7 @@ import pMap from 'p-map';
 import invariant from 'tiny-invariant';
 import i18n from 'i18next';
 
-import { getSuffixedOutPath, transferTimestamps, getOutFileExtension, getOutDir, getHtml5ifiedPath, unlinkWithRetry, getFrameDuration, isMac, html5ifiedPrefix, html5dummySuffix, assertFileExists, decodeText, isExecaError, getStdioString } from '../util';
+import { getSuffixedOutPath, transferTimestamps, getOutFileExtension, getOutDir, getHtml5ifiedPath, trashFile, getFrameDuration, isMac, html5ifiedPrefix, html5dummySuffix, assertFileExists, decodeText, isExecaError, getStdioString } from '../util';
 import { isCuttingStart, isCuttingEnd, runFfmpegWithProgress, getFfCommandLine, getDuration, createChaptersFromSegments, readFileFfprobeMeta, getExperimentalArgs, getVideoTimescaleArgs, logStdoutStderr, runFfmpegConcat, RefuseOverwriteError, runFfmpeg } from '../ffmpeg';
 import { flacEncodeArgs, getEffectiveAvoidNegativeTs, getKeyframeCutSeekCompensation, getMapStreamsArgs, getStreamIdsToCopy, isCopyingOnlyAudioStreams, isCropActive, isAspectRatioActive } from '../util/streams';
 import { needsSmartCut, getCodecParams } from '../smartcut';
@@ -83,8 +83,8 @@ function getMatroskaFlags(outFormat: string | undefined) {
 
 const getChaptersInputArgs = (ffmetadataPath: string | undefined) => (ffmetadataPath ? ['-f', 'ffmetadata', '-i', ffmetadataPath] : []);
 
-async function tryDeleteFiles(paths: string[]) {
-  return pMap(paths, (path) => unlinkWithRetry(path).catch((err: unknown) => console.error('Failed to delete', path, err)), { concurrency: 5 });
+async function tryTrashFiles(paths: string[]) {
+  return pMap(paths, (path) => trashFile(path).catch((err: unknown) => console.error('Failed to move to Trash', path, err)), { concurrency: 5 });
 }
 
 export async function maybeMkDeepOutDir({ outputDir, fileOutPath }: { outputDir: string, fileOutPath: string }) {
@@ -249,7 +249,7 @@ function useFfmpegOperations({ filePath, treatInputFileModifiedTimeAsStart, trea
 
       return { haveExcludedStreams: excludedStreamIds.length > 0 };
     } finally {
-      if (chaptersPath) await tryDeleteFiles([chaptersPath]);
+      if (chaptersPath) await tryTrashFiles([chaptersPath]);
     }
   }, [appendLastCommandsLog, shouldSkipExistingFile, treatInputFileModifiedTimeAsStart, treatOutputFileModifiedTimeAsStart]);
 
@@ -736,14 +736,14 @@ function useFfmpegOperations({ filePath, treatInputFileModifiedTimeAsStart, trea
         await transferSegmentTimestamps();
         return { path: finalOutPath, created: true };
       } finally {
-        await tryDeleteFiles(smartCutSegmentsToConcat);
+        await tryTrashFiles(smartCutSegmentsToConcat);
       }
     };
 
     try {
       return await pMap(segments, cutSegment, { concurrency: 1 });
     } finally {
-      if (chaptersPath) await tryDeleteFiles([chaptersPath]);
+      if (chaptersPath) await tryTrashFiles([chaptersPath]);
     }
   }, [shouldSkipExistingFile, isEncoding, filePath, lossyMode, losslessCutSingle, cutEncodeSmartPart, encCustomBitrate, concatFiles, treatInputFileModifiedTimeAsStart, treatOutputFileModifiedTimeAsStart]);
 
@@ -1157,7 +1157,7 @@ function useFfmpegOperations({ filePath, treatInputFileModifiedTimeAsStart, trea
   }, [extractAttachmentStreams, extractNonAttachmentStreams, filePath]);
 
   return {
-    cutMultiple, concatFiles, html5ify, html5ifyDummy, fixInvalidDuration, decimate, concatCutSegments, extractStreams, tryDeleteFiles,
+    cutMultiple, concatFiles, html5ify, html5ifyDummy, fixInvalidDuration, decimate, concatCutSegments, extractStreams, tryTrashFiles,
   };
 }
 

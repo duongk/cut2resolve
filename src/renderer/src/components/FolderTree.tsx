@@ -124,9 +124,10 @@ function MediaFile({ path, name, depth, selectedPath, hasOpenFile, onFileAction 
   );
 }
 
-function Directory({ path, depth, selectedPath, hasOpenFile, onFileAction, onMoveRelatedFiles, onFocusFolder }: {
+function Directory({ path, depth, refreshVersion, selectedPath, hasOpenFile, onFileAction, onMoveRelatedFiles, onFocusFolder }: {
   path: string,
   depth: number,
+  refreshVersion: number,
   selectedPath: string | undefined,
   hasOpenFile: boolean,
   onFileAction: (path: string, action: FolderFileAction) => void,
@@ -168,7 +169,7 @@ function Directory({ path, depth, selectedPath, hasOpenFile, onFileAction, onMov
       if (!canceled) setError(err instanceof Error ? err.message : String(err));
     });
     return () => { canceled = true; };
-  }, [expanded, path, refreshKey]);
+  }, [expanded, path, refreshKey, refreshVersion]);
 
   const toggle = useCallback(() => setExpanded((value) => !value), []);
   const refresh = useCallback(() => setRefreshKey((value) => value + 1), []);
@@ -214,7 +215,7 @@ function Directory({ path, depth, selectedPath, hasOpenFile, onFileAction, onMov
       {expanded && (
         <>
           {entries?.map((entry) => (
-            entry.isDirectory ? <Directory key={entry.path} path={entry.path} depth={depth + 1} selectedPath={selectedPath} hasOpenFile={hasOpenFile} onFileAction={onFileAction} onMoveRelatedFiles={onMoveRelatedFiles} onFocusFolder={onFocusFolder} /> : <MediaFile key={entry.path} path={entry.path} name={entry.name} depth={depth + 1} selectedPath={selectedPath} hasOpenFile={hasOpenFile} onFileAction={onFileAction} />
+            entry.isDirectory ? <Directory key={entry.path} path={entry.path} depth={depth + 1} refreshVersion={refreshVersion} selectedPath={selectedPath} hasOpenFile={hasOpenFile} onFileAction={onFileAction} onMoveRelatedFiles={onMoveRelatedFiles} onFocusFolder={onFocusFolder} /> : <MediaFile key={entry.path} path={entry.path} name={entry.name} depth={depth + 1} selectedPath={selectedPath} hasOpenFile={hasOpenFile} onFileAction={onFileAction} />
           ))}
           {entries?.length === 0 && <div style={{ padding: '.2em .5em .2em', paddingLeft: `${(depth + 1) * 14 + 6}px`, color: 'var(--gray-10)', fontSize: '.85em' }}>{t('No media files')}</div>}
           {error && <div title={error} style={{ padding: '.2em .5em', color: 'var(--red-10)', fontSize: '.8em' }}>{t('Unable to read folder')}</div>}
@@ -224,8 +225,9 @@ function Directory({ path, depth, selectedPath, hasOpenFile, onFileAction, onMov
   );
 }
 
-function FolderTree({ folderPath, selectedPath, width, hasOpenFile, onFileAction, onMoveRelatedFiles, onChangeFolder, onOpenLocation, onClose }: {
+function FolderTree({ folderPath, refreshVersion, selectedPath, width, hasOpenFile, onFileAction, onMoveRelatedFiles, onChangeFolder, onOpenLocation, onClose }: {
   folderPath: string,
+  refreshVersion: number,
   selectedPath: string | undefined,
   width: number,
   hasOpenFile: boolean,
@@ -245,7 +247,7 @@ function FolderTree({ folderPath, selectedPath, width, hasOpenFile, onFileAction
         <button type="button" title={t('Close folder browser')} style={{ ...rowStyle, width: 'auto', padding: '.2em' }} onClick={onClose}><FaTimes /></button>
       </div>
       <MountedLocations folderPath={folderPath} onOpenLocation={onOpenLocation} />
-      <Directory path={folderPath} depth={0} selectedPath={selectedPath} hasOpenFile={hasOpenFile} onFileAction={onFileAction} onMoveRelatedFiles={onMoveRelatedFiles} onFocusFolder={onOpenLocation} />
+      <Directory path={folderPath} depth={0} refreshVersion={refreshVersion} selectedPath={selectedPath} hasOpenFile={hasOpenFile} onFileAction={onFileAction} onMoveRelatedFiles={onMoveRelatedFiles} onFocusFolder={onOpenLocation} />
     </aside>
   );
 }

@@ -34,6 +34,10 @@ Lossless cuts can only start at a keyframe, so a cut starts at the keyframe befo
 - Select and change segments with a JavaScript-based [expression language](expressions.md)
 - [Import](index.md#importexport-projects) segments from MP4/MKV chapters, CSV, EDL (MPlayer, CMX 3600), YouTube chapters, Cutlist, CUE, DaVinci Resolve/Final Cut Pro XML, FCPXML, PotPlayer bookmarks, SRT subtitles, OpenTimelineIO and DV Analyzer
 - Export segments as CSV, TSV/TXT, SRT subtitles, YouTube chapter timestamps or DaVinci Resolve Media Pool duration-marker sidecars, with optional per-clip logging metadata stored alongside the source
+- Install the Resolve marker importer on Windows in `%APPDATA%\Blackmagic Design\DaVinci Resolve\Support\Fusion\Scripts\Utility`
+- On Windows and macOS, trash and cleanup actions move files into a `Trash` folder beside the source instead of calling the system delete operation, including on mapped/network drives. No permanent-delete fallback is offered. Restore files by moving them back; related Proxy files retain their subfolder and existing Trash files receive a numeric suffix.
+- Folder browser refreshes after moving or trashing clips preserve expanded folders and the current scroll position.
+- Packaged applications include GPL, attribution, dependency notices, and build/source provenance; Help → Licenses opens the included dependency notices offline.
 - Browse a chosen folder, mounted external/network drive, or mapped Windows drive in a left-hand directory tree; open media directly, right-click a folder to focus the browser on it, or move/trash a camera clip together with same-named files, Sony `M01.XML` sidecars, Cut2Resolve sidecars, and `Proxy` copies (case-insensitive). Drag a camera clip onto a destination folder to move the same related group.
 - Choose a 1×, 1.2×, 1.5×, or 2× preview playback speed from the bottom control bar
 - Turn segments into chapters in an otherwise unmodified file ("Segments to chapters" export mode)

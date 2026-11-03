@@ -233,7 +233,6 @@ export function useDialog() {
         const trashTmpFiles = getVal('trashTmpFiles');
         const trashSourceFile = getVal('trashSourceFile');
         const trashProjectFile = getVal('trashProjectFile');
-        const deleteIfTrashFails = getVal('deleteIfTrashFails');
         const closeFile = getVal('closeFile');
         const askForCleanup = getVal('askForCleanup');
         const cleanupAfterExport = getVal('cleanupAfterExport');
@@ -264,7 +263,7 @@ export function useDialog() {
             </Dialog.Title>
 
             <Dialog.Description>
-              {t('What do you want to do after exporting a file or when pressing the "delete source file" button?')}
+              {t('Selected files will be moved to a Trash folder beside their source. Restore them by moving them back; permanent deletion is done outside cut2resolve.')}
             </Dialog.Description>
 
             <Checkbox label={t('Close currently opened file')} checked={closeFile} disabled={trashSourceFile || trashTmpFiles} onCheckedChange={(checked) => onChange('closeFile', checked)} />
@@ -273,7 +272,6 @@ export function useDialog() {
               <Checkbox label={t('Trash auto-generated files')} checked={trashTmpFiles} onCheckedChange={(checked) => onChange('trashTmpFiles', checked)} />
               <Checkbox label={t('Trash original source file')} checked={trashSourceFile} onCheckedChange={(checked) => onChange('trashSourceFile', checked)} />
               <Checkbox label={t('Trash project LLC file')} checked={trashProjectFile} onCheckedChange={(checked) => onChange('trashProjectFile', checked)} />
-              <Checkbox label={t('Permanently delete the files if trash fails?')} disabled={!(trashTmpFiles || trashProjectFile || trashSourceFile)} checked={deleteIfTrashFails} onCheckedChange={(checked) => onChange('deleteIfTrashFails', checked)} />
             </div>
 
             <div style={{ marginBottom: '2em' }}>

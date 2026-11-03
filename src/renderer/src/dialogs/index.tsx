@@ -4,13 +4,12 @@ import { Trans } from 'react-i18next';
 import invariant from 'tiny-invariant';
 import { FaArrowRight, FaExclamationTriangle, FaInfoCircle, FaQuestionCircle } from 'react-icons/fa';
 import ky from 'ky';
-import pMap from 'p-map';
 
 import { formatDuration } from '../util/duration';
 import { dirname } from '../util/path';
 import { parseRatio } from '../../../common/util';
 import { parseYouTube } from '../edlFormats';
-import { appPath, isMasBuild, isStoreBuild, isWindows, isWindowsStoreBuild, testFailFsOperation, trashFile, unlinkWithRetry } from '../util';
+import { appPath, isMasBuild, isStoreBuild, isWindows, isWindowsStoreBuild, testFailFsOperation, trashFile } from '../util';
 import type { ParseTimecode } from '../types';
 import type { FindKeyframeMode } from '../ffmpeg';
 import { dangerColor, primaryColor, warningColor } from '../colors';
@@ -345,7 +344,6 @@ export interface CleanupChoicesType {
   cleanupAfterExport?: boolean | undefined,
   trashSourceFile?: boolean,
   trashProjectFile?: boolean,
-  deleteIfTrashFails?: boolean,
 }
 export type CleanupChoice = keyof CleanupChoicesType;
 
@@ -568,35 +566,14 @@ export async function promptDownloadMediaUrl(outPath: string) {
 }
 
 
-export async function deleteFiles({ paths, deleteIfTrashFails, signal }: { paths: string[], deleteIfTrashFails?: boolean | undefined, signal: AbortSignal }) {
-  const failedToTrashFiles: string[] = [];
-
+export async function deleteFiles({ paths, signal }: { paths: string[], signal: AbortSignal }) {
   // eslint-disable-next-line eslint-js/no-restricted-syntax
   for (const path of paths) {
-    try {
-      if (testFailFsOperation) throw new Error('test trash failure');
-      // eslint-disable-next-line no-await-in-loop
-      await trashFile(path);
-      signal.throwIfAborted();
-    } catch (err) {
-      console.error(err);
-      failedToTrashFiles.push(path);
-    }
+    signal.throwIfAborted();
+    if (testFailFsOperation) throw new Error('test trash failure');
+    // eslint-disable-next-line no-await-in-loop -- Leave remaining files untouched after a failed move.
+    await trashFile(path);
   }
-
-  if (failedToTrashFiles.length === 0) return; // All good!
-
-  if (!deleteIfTrashFails) {
-    const { value } = await getSwal().Swal.fire({
-      icon: 'warning',
-      text: i18n.t('Unable to move file to trash. Do you want to permanently delete it?'),
-      confirmButtonText: i18n.t('Permanently delete'),
-      showCancelButton: true,
-    });
-    if (!value) return;
-  }
-
-  await pMap(failedToTrashFiles, async (path) => unlinkWithRetry(path, { signal }), { concurrency: 5 });
 }
 
 

@@ -62,11 +62,11 @@ async function loadSrt(path: string) {
   return parseSrtToSegments(await readFile(path, 'utf8'));
 }
 
-/** Installs the one reusable importer into Resolve's per-user Utility scripts folder. */
+/** Installs the one reusable importer into Resolve's per-user scripts folder. */
 export async function installResolveMarkerImporterScript() {
   let scriptDir: string;
   if (isMac) scriptDir = join(homedir(), 'Library', 'Application Support', 'Blackmagic Design', 'DaVinci Resolve', 'Fusion', 'Scripts', 'Utility');
-  else if (isWindows) scriptDir = join(app.getPath('appData'), 'Blackmagic Design', 'DaVinci Resolve', 'Fusion', 'Scripts', 'Utility');
+  else if (isWindows) scriptDir = join(app.getPath('appData'), 'Blackmagic Design', 'DaVinci Resolve', 'Support', 'Fusion', 'Scripts', 'Utility');
   else throw new Error('Automatic DaVinci Resolve script installation is supported on macOS and Windows only.');
 
   await mkdir(scriptDir, { recursive: true });
