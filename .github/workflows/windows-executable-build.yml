@@ -41,5 +41,5 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: cut2resolve-windows-x64-portable
-          path: dist/cut2resolve-win-x64.exe
+          path: dist/cut2resolve-*-win-x64.exe
           if-no-files-found: error

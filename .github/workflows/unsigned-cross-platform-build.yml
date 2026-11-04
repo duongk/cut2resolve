@@ -40,8 +40,8 @@ jobs:
         with:
           name: cut2resolve-mac-unsigned
           path: |
-            dist/cut2resolve-mac-arm64.dmg
-            dist/cut2resolve-mac-x64.dmg
+            dist/cut2resolve-*-mac-arm64.dmg
+            dist/cut2resolve-*-mac-x64.dmg
           if-no-files-found: error
 
   windows:
@@ -73,5 +73,5 @@ jobs:
       - uses: actions/upload-artifact@v5
         with:
           name: cut2resolve-windows-x64-unsigned
-          path: dist/cut2resolve-win-x64.7z
+          path: dist/cut2resolve-*-win-x64.7z
           if-no-files-found: error

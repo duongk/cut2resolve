@@ -87,6 +87,6 @@ jobs:
         with:
           name: cut2resolve-mac-signed-notarized
           path: |
-            dist/cut2resolve-mac-arm64.dmg
-            dist/cut2resolve-mac-x64.dmg
+            dist/cut2resolve-*-mac-arm64.dmg
+            dist/cut2resolve-*-mac-x64.dmg
           if-no-files-found: error

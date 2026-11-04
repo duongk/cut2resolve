@@ -172,7 +172,7 @@
     "appId": "io.github.duongk.cut2resolve",
     "beforePack": "./script/prepareDistribution.ts",
     "afterPack": "./script/afterPack.ts",
-    "artifactName": "${productName}-${os}-${arch}.${ext}",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "extraResources": [
       {
         "from": "dist/distribution-notices",
